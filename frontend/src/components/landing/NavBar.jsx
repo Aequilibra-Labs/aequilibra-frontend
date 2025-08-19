@@ -1,8 +1,9 @@
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export function NavBar() {
   return (
-    <nav className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 mt-5">
+    <nav className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-14 max-w-screen-2xl items-center justify-between px-6 md:px-8">
         <div className="flex items-center">
           <a className="flex items-center space-x-2" href="/">
@@ -23,7 +24,8 @@ export function NavBar() {
             </a>
           </nav>
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center space-x-2">
+          <ThemeToggle />
           <Button asChild>
             <a href="/app">Launch App</a>
           </Button>
