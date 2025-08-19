@@ -1,18 +1,22 @@
+import { NavBar } from '@/components/landing/NavBar';
+import { Hero } from '@/components/landing/Hero';
+import { Features } from '@/components/landing/Features';
+import { HowItWorks } from '@/components/landing/HowItWorks';
+import { SupportedDexes } from '@/components/landing/SupportedDexes';
+import { Footer } from '@/components/landing/Footer';
+
 // Landing/Marketing homepage
 export default function HomePage() {
   return (
-    <div className="min-h-screen">
-      <h1 className="text-4xl font-bold text-center py-20">
-        Aequilibra - Find the best funding across perps. One dashboard.
-      </h1>
-      <div className="text-center">
-        <a
-          href="/app"
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Launch App
-        </a>
-      </div>
+    <div className="flex min-h-screen flex-col w-full">
+      <NavBar />
+      <main className="flex-1 w-full space-y-8 md:space-y-12">
+        <Hero />
+        <Features />
+        <HowItWorks />
+        <SupportedDexes />
+      </main>
+      <Footer />
     </div>
   );
 }

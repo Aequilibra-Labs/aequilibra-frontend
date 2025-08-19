@@ -1,32 +1,35 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export function HowItWorks() {
   const steps = [
     {
-      step: "1",
-      title: "Connect Your Wallet",
-      description: "Safely connect your Web3 wallet to access the platform"
+      step: '1',
+      title: 'Connect Your Wallet',
+      description: 'Safely connect your Web3 wallet to access the platform',
     },
     {
-      step: "2", 
-      title: "Browse Markets",
-      description: "Explore funding rates across multiple DEXes and trading pairs"
+      step: '2',
+      title: 'Browse Markets',
+      description:
+        'Explore funding rates across multiple DEXes and trading pairs',
     },
     {
-      step: "3",
-      title: "Analyze Data",
-      description: "View historical charts, compare rates, and assess risk metrics"
+      step: '3',
+      title: 'Analyze Data',
+      description:
+        'View historical charts, compare rates, and assess risk metrics',
     },
     {
-      step: "4",
-      title: "Track Opportunities",
-      description: "Add pairs to your watchlist and monitor funding rate changes"
-    }
-  ]
+      step: '4',
+      title: 'Track Opportunities',
+      description:
+        'Add pairs to your watchlist and monitor funding rate changes',
+    },
+  ];
 
   return (
-    <section className="container space-y-6 py-8 md:py-12 lg:py-24">
-      <div className="mx-auto flex max-w-[58rem] flex-col items-center space-y-4 text-center">
+    <section className="w-full px-4 space-y-4 py-6 md:py-8 lg:py-12">
+      <div className="mx-auto flex max-w-[58rem] flex-col items-center justify-center space-y-4 text-center">
         <h2 className="font-bold text-3xl leading-[1.1] sm:text-3xl md:text-6xl">
           How It Works
         </h2>
@@ -44,11 +47,13 @@ export function HowItWorks() {
               <CardTitle className="text-lg">{step.title}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">{step.description}</p>
+              <p className="text-sm text-muted-foreground">
+                {step.description}
+              </p>
             </CardContent>
           </Card>
         ))}
       </div>
     </section>
-  )
+  );
 }

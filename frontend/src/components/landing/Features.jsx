@@ -1,42 +1,51 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 
 export function Features() {
   const features = [
     {
-      title: "Aggregated Data",
-      description: "Compare funding rates across multiple perpetual DEXes in real-time",
-      icon: "📊"
+      title: 'Aggregated Data',
+      description:
+        'Compare funding rates across multiple perpetual DEXes in real-time',
+      icon: '📊',
     },
     {
-      title: "Historical Charts",
-      description: "Track funding rate trends and APR history over time",
-      icon: "📈"
+      title: 'Historical Charts',
+      description: 'Track funding rate trends and APR history over time',
+      icon: '📈',
     },
     {
-      title: "Multi-Chain Support", 
-      description: "Access funding data from Arbitrum, Optimism, Base, and more",
-      icon: "🔗"
+      title: 'Multi-Chain Support',
+      description:
+        'Access funding data from Arbitrum, Optimism, Base, and more',
+      icon: '🔗',
     },
     {
-      title: "Risk Management",
-      description: "Understand volatility and open interest before making decisions",
-      icon: "🛡️"
+      title: 'Risk Management',
+      description:
+        'Understand volatility and open interest before making decisions',
+      icon: '🛡️',
     },
     {
-      title: "Portfolio Tracking",
-      description: "Monitor your positions and watch your favorite pairs",
-      icon: "📱"
+      title: 'Portfolio Tracking',
+      description: 'Monitor your positions and watch your favorite pairs',
+      icon: '📱',
     },
     {
-      title: "Non-Custodial",
-      description: "Connect your wallet safely - we never hold your funds",
-      icon: "🔐"
-    }
-  ]
+      title: 'Non-Custodial',
+      description: 'Connect your wallet safely - we never hold your funds',
+      icon: '🔐',
+    },
+  ];
 
   return (
-    <section className="container space-y-6 py-8 md:py-12 lg:py-24">
-      <div className="mx-auto flex max-w-[58rem] flex-col items-center space-y-4 text-center">
+    <section className="w-full px-4 space-y-4 py-6 md:py-8 lg:py-12">
+      <div className="mx-auto flex max-w-[58rem] flex-col items-center justify-center space-y-4 text-center">
         <h2 className="font-bold text-3xl leading-[1.1] sm:text-3xl md:text-6xl">
           Key Features
         </h2>
@@ -58,5 +67,5 @@ export function Features() {
         ))}
       </div>
     </section>
-  )
+  );
 }
