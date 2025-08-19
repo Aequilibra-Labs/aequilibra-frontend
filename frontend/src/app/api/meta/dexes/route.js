@@ -2,6 +2,6 @@
 export async function GET(request) {
   // Mock implementation - will be replaced with real API calls
   return Response.json({
-    message: "DEX metadata endpoint"
+    message: 'DEX metadata endpoint',
   });
 }

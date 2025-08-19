@@ -6,8 +6,8 @@ export default function HomePage() {
         Aequilibra - Find the best funding across perps. One dashboard.
       </h1>
       <div className="text-center">
-        <a 
-          href="/app" 
+        <a
+          href="/app"
           className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
         >
           Launch App
