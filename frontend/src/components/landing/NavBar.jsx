@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 
 export function NavBar() {
   return (
-    <nav className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 mt-5">
       <div className="mx-auto flex h-14 max-w-screen-2xl items-center justify-between px-6 md:px-8">
         <div className="flex items-center">
           <a className="flex items-center space-x-2" href="/">
@@ -27,6 +27,11 @@ export function NavBar() {
           <Button asChild>
             <a href="/app">Launch App</a>
           </Button>
+          {/*   Uncomment the following line to add a "Connect Wallet" button if Elio wants it to be displayed here
+          <Button asChild variant="outline" className="ml-4">
+            <a href="/app">Connect Wallet</a>
+          </Button>
+          */}
         </div>
       </div>
     </nav>
