@@ -1,5 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { ConnectWallet } from '@/components/wallet/ConnectWallet';
+import { ChainSwitcher } from '@/components/wallet/ChainSwitcher';
 
 export function AppNavBar() {
   return (
@@ -37,10 +39,9 @@ export function AppNavBar() {
           </nav>
         </div>
         <div className="flex items-center space-x-3">
+          <ChainSwitcher />
           <ThemeToggle />
-          <Button asChild variant="outline" size="lg">
-            <a href="/app/profile">Connect Wallet</a>
-          </Button>
+          <ConnectWallet />
         </div>
       </div>
     </nav>
