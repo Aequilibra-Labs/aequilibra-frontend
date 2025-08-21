@@ -12,12 +12,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ChevronDown, Check } from 'lucide-react';
 import { supportedChains } from '@/lib/wagmi';
+import { useEffect, useState } from 'react';
 
 export function ChainSwitcher() {
   const { chain } = useAccount();
   const { switchChain, isPending } = useSwitchChain();
+  const [isClient, setIsClient] = useState(false);
 
-  if (!chain) {
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient || !chain) {
     return null;
   }
 
