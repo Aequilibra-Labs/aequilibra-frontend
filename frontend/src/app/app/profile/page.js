@@ -1,194 +1,469 @@
+// src/app/app/profile/page.js
 'use client';
 
-import { ConnectWallet } from '@/components/wallet/ConnectWallet';
+import { useEffect, useMemo, useState } from 'react';
+import { useAccount, useChainId, useSignMessage, useSignTypedData } from 'wagmi';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { ConnectWallet } from '@/components/wallet/ConnectWallet';
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
+import { recoverTypedDataAddress } from 'viem';
 import Image from 'next/image';
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import { useAccount, useSignTypedData } from 'wagmi';
 
-const IS_TESTNET = process.env.NEXT_PUBLIC_HL_TESTNET === 'false' ? false : true;
-const HL_CHAIN = IS_TESTNET ? 'Testnet' : 'Mainnet';
-const SIGNATURE_CHAIN_ID = '0x66eee'; // domain chain id Hyperliquid expects for user-signed actions
-
-function buildApproveAgentTypedData({ agentAddress, agentName, nonce }) {
-  return {
-    domain: {
-      name: 'HyperliquidSignTransaction',
-      version: '1',
-      chainId: parseInt(SIGNATURE_CHAIN_ID, 16),
-      verifyingContract: '0x0000000000000000000000000000000000000000',
-    },
-    primaryType: 'HyperliquidTransaction:ApproveAgent',
-    types: {
-      'HyperliquidTransaction:ApproveAgent': [
-        { name: 'hyperliquidChain', type: 'string' },
-        { name: 'agentAddress', type: 'address' },
-        { name: 'agentName', type: 'string' },
-        { name: 'nonce', type: 'uint64' },
-      ],
-    },
-    message: {
-      hyperliquidChain: HL_CHAIN,
-      agentAddress,
-      agentName,
-      nonce,
-    },
-  };
+/* ------------------------ tiny local UI helpers ----------------------- */
+function FieldLabel(props) {
+  return (
+    <label
+      {...props}
+      className={['text-sm font-medium leading-none', props.className || ''].join(' ')}
+    />
+  );
 }
+function TextInput({ className = '', type = 'text', ...props }) {
+  return (
+    <input
+      type={type}
+      className={[
+        'flex h-10 w-full rounded-md border border-gray-300 bg-white',
+        'px-3 py-2 text-sm placeholder:text-gray-400',
+        'focus:outline-none focus:ring-2 focus:ring-black/10',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        className,
+      ].join(' ')}
+      {...props}
+    />
+  );
+}
+
+/* --------------------------- constants -------------------------------- */
+const DEFAULT_AGENT_NAME = 'aeq-agent';
+const DEFAULT_TTL_SECONDS = 180 * 24 * 60 * 60; // 180 days
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
+
+/* --------------------------- SIWE helpers ----------------------------- */
+function buildSiweMessage({ address, nonce, chainId, domain, uri }) {
+  const issuedAt = new Date().toISOString();
+  return `${domain} wants you to sign in with your Ethereum account:
+${address}
+
+URI: ${uri}
+Version: 1
+Chain ID: ${chainId}
+Nonce: ${nonce}
+Issued At: ${issuedAt}`;
+}
+
+/* --------------------------- HL helpers ------------------------------- */
+function toHexChainId(n) {
+  return '0x' + Number(n).toString(16);
+}
+
+// keep v as 27/28 (NOT 0/1)
+function splitSigRSV(sigHex) {
+  const s = sigHex.slice(2);
+  const r = '0x' + s.slice(0, 64);
+  const sPart = '0x' + s.slice(64, 128);
+  let v = parseInt(s.slice(128, 130), 16);
+  if (v < 27) v += 27;
+  return { r, s: sPart, v };
+}
+
+// EIP-712 typed data for Hyperliquid ApproveAgent
+function buildEip712ForApprove(action, evmChainIdNumber) {
+  const domain = {
+    name: 'HyperliquidSignTransaction',
+    version: '1',
+    chainId: evmChainIdNumber, // number (e.g., 42161)
+    verifyingContract: '0x0000000000000000000000000000000000000000',
+  };
+  const types = {
+    'HyperliquidTransaction:ApproveAgent': [
+      { name: 'hyperliquidChain', type: 'string' },  // "Mainnet" | "Testnet"
+      { name: 'agentAddress', type: 'address' },     // 0x...
+      { name: 'agentName', type: 'string' },         // can be empty
+      { name: 'nonce', type: 'uint64' },             // equals outer nonce
+    ],
+  };
+  const primaryType = 'HyperliquidTransaction:ApproveAgent';
+  const message = {
+    hyperliquidChain: action.hyperliquidChain,
+    agentAddress: action.agentAddress.toLowerCase(),
+    agentName: action.agentName ?? '',
+    nonce: BigInt(action.nonce),
+  };
+  return { domain, types, primaryType, message };
+}
+
+async function getHyperliquidChainFromHealth() {
+  try {
+    const r = await fetch('/api/health', { cache: 'no-store' });
+    const j = await r.json();
+    const url = j?.exchange_url || '';
+    if (!url) return 'Mainnet';
+    return url.includes('test') ? 'Testnet' : 'Mainnet';
+  } catch {
+    return 'Mainnet';
+  }
+}
+
+/* --------------------- deterministic date formatting ------------------ */
+function stableUTCFromSeconds(tsSec) {
+  if (!tsSec) return '—';
+  const d = new Date(tsSec * 1000);
+  return d.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+}
+
+/* =============================== PAGE ================================= */
 
 export default function ProfilePage() {
   const { address, isConnected } = useAccount();
+  const chainId = useChainId();
+  const { signMessageAsync } = useSignMessage();
   const { signTypedDataAsync } = useSignTypedData();
 
-  const [isClient, setIsClient] = useState(false);
-  const [status, setStatus] = useState('');
-  const [agentAddr, setAgentAddr] = useState(null);
-  const [hlConnected, setHlConnected] = useState(false);
-  const [isWorking, setIsWorking] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  useEffect(() => setIsClient(true), []);
-  const disabled = useMemo(() => !isConnected || isWorking, [isConnected, isWorking]);
+  const owner = useMemo(() => address?.toLowerCase() ?? null, [address]);
 
-  const onConnectHyperliquid = useCallback(async () => {
-    if (!isConnected || !address) return;
-    setIsWorking(true);
-    setStatus('Creating agent on backend…');
-    setAgentAddr(null);
-
+  // session
+  const [sessionAddr, setSessionAddr] = useState(null);
+  const refreshSession = async () => {
     try {
-      // 1) Create agent (server generates keypair, returns only address)
-      const r1 = await fetch('/api/agents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'web-agent' }),
-      });
-      if (!r1.ok) throw new Error(await r1.text());
-      const { agent_addr } = await r1.json();
-      setAgentAddr(agent_addr);
-
-      // 2) Sign EIP-712 ApproveAgent
-      setStatus('Please sign the Hyperliquid approval in your wallet…');
-      const nonce = Date.now();
-      const typed = buildApproveAgentTypedData({
-        agentAddress: agent_addr,
-        agentName: 'web-agent',
-        nonce,
-      });
-
-      const sigHex = await signTypedDataAsync({
-        domain: typed.domain,
-        types: typed.types,
-        primaryType: typed.primaryType,
-        message: typed.message,
-      });
-
-      // Split signature -> { r, s, v }
-      const raw = sigHex.slice(2);
-      const r = '0x' + raw.slice(0, 64);
-      const s = '0x' + raw.slice(64, 128);
-      let v = parseInt(raw.slice(128, 130), 16);
-      if (v < 27) v += 27;
-
-      // 3) Submit approval
-      setStatus('Submitting approval to backend…');
-      const r2 = await fetch('/api/agents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'approve',              // ensures route forwards to /hl/agent/approve
-          owner: address,
-          agent_address: agent_addr,      // match backend pydantic alias
-          agent_name: 'web-agent',        // match backend pydantic alias
-          signatureChainId: SIGNATURE_CHAIN_ID,
-          nonce,
-          signature: { r, s, v },         // required shape for HL /exchange
-        }),
-      });
-      const text = await r2.text();
-      if (!r2.ok) throw new Error(text);
-
-      setHlConnected(true);
-      setStatus('Agent approved. Connected to Hyperliquid.');
-    } catch (e) {
-      setStatus(e?.message || String(e));
-      setHlConnected(false);
-    } finally {
-      setIsWorking(false);
+      const res = await fetch('/api/auth/session', { cache: 'no-store' });
+      const data = await res.json();
+      setSessionAddr(data?.address || null);
+    } catch {
+      setSessionAddr(null);
     }
-  }, [address, isConnected, signTypedDataAsync]);
+  };
+  useEffect(() => {
+    if (mounted) refreshSession();
+  }, [mounted]);
 
-  const onDisconnectHyperliquid = useCallback(() => {
-    setHlConnected(false);
-    setAgentAddr(null);
-    setStatus('');
-  }, []);
+  // single agent (HL)
+  const [agent, setAgent] = useState(null);
+  const [loadingAgent, setLoadingAgent] = useState(false);
 
-  if (!isClient) {
-    return (
-      <div className="max-w-xl mx-auto py-12 px-4">
-        <h1 className="text-3xl font-bold mb-6">Profile</h1>
-        <div className="space-y-6"><span className="block mb-2 text-lg font-medium">Loading...</span></div>
-      </div>
-    );
-  }
+  const refreshAgent = async () => {
+    if (!owner) return;
+    try {
+      setLoadingAgent(true);
+      const res = await fetch(`/api/agents/hl?owner=${owner}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && (data.agent_address || data.agent_name || data.expiry_unix)) {
+          setAgent(data);
+        } else {
+          setAgent(null);
+        }
+      } else if (res.status === 404) {
+        setAgent(null);
+      } else {
+        // fallback to list route if your backend doesn't have /agents/hl
+        const resList = await fetch(`/api/agents?owner=${owner}`, { cache: 'no-store' });
+        const list = await resList.json().catch(() => []);
+        setAgent(Array.isArray(list) && list.length ? list[0] : null);
+      }
+    } catch {
+      setAgent(null);
+    } finally {
+      setLoadingAgent(false);
+    }
+  };
+
+  useEffect(() => {
+    if (owner) refreshAgent();
+    else setAgent(null);
+  }, [owner]);
+
+  // form state (only keys are user-visible)
+  const [agentPriv, setAgentPriv] = useState('');
+  const [agentAddr, setAgentAddr] = useState('');
+
+  const [busy, setBusy] = useState(false);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  const connectedAndAuthed =
+    mounted &&
+    isConnected &&
+    sessionAddr &&
+    owner &&
+    sessionAddr.toLowerCase() === owner.toLowerCase();
+
+  /* --------------------------- actions -------------------------------- */
+
+  // Only generate agent private/public keypair
+  const handleGenerateKey = () => {
+    const pk = generatePrivateKey(); // 0x...
+    const acct = privateKeyToAccount(pk);
+    setAgentPriv(pk);
+    setAgentAddr(acct.address);
+  };
+
+  const handleSignIn = async () => {
+    try {
+      setAuthBusy(true);
+      setError(null);
+      const n = await fetch('/api/auth/nonce', { cache: 'no-store' }).then((r) => r.json());
+      if (!n?.nonce || !n?.domain || !n?.uri) {
+        throw new Error('Invalid nonce payload from backend');
+      }
+      const msg = buildSiweMessage({
+        address: owner,
+        nonce: n.nonce,
+        chainId,
+        domain: n.domain,
+        uri: n.uri,
+      });
+      const signature = await signMessageAsync({ message: msg });
+      const r = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ address: owner, message: msg, signature }),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(j?.detail || 'Verification failed');
+      }
+      await refreshSession();
+      await refreshAgent();
+    } catch (e) {
+      setError(e.message || 'Sign-in failed');
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const approveAgent = async () => {
+    try {
+      setBusy(true);
+      setError(null);
+
+      if (!connectedAndAuthed) throw new Error('Please sign in with your wallet first.');
+      if (!agentPriv || !agentAddr) {
+        throw new Error('Missing agent private key or address.');
+      }
+
+      const hyperliquidChain = await getHyperliquidChainFromHealth();
+      const nowMs = Date.now();
+
+      const action = {
+        type: 'approveAgent',
+        hyperliquidChain,
+        signatureChainId: toHexChainId(chainId), // e.g., "0xa4b1"
+        agentAddress: agentAddr.toLowerCase(),
+        agentName: DEFAULT_AGENT_NAME,
+        nonce: nowMs, // must equal outer nonce
+      };
+
+      // Build & sign typed data (owner wallet)
+      const { domain, types, primaryType, message } = buildEip712ForApprove(action, chainId);
+      const sigHex = await signTypedDataAsync({ domain, types, primaryType, message });
+
+      // Verify locally we recover the connected wallet
+      const recovered = await recoverTypedDataAddress({ domain, types, primaryType, message, signature: sigHex });
+      if (recovered.toLowerCase() !== owner.toLowerCase()) {
+        throw new Error(`Signature recovers to ${recovered}, not your wallet ${owner}`);
+      }
+
+      const { r, s, v } = splitSigRSV(sigHex);
+
+      const payload = {
+        owner,
+        agent_name: DEFAULT_AGENT_NAME,
+        agent_privkey_hex: agentPriv,
+        agent_address: agentAddr.toLowerCase(),
+        ttl_seconds: DEFAULT_TTL_SECONDS, // fixed 180 days (hidden)
+        approve_request: {
+          action,
+          nonce: nowMs, // equals action.nonce
+          signature: { r, s, v },
+        },
+      };
+
+      const resp = await fetch('/api/agents/hl/approve-agent', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const j = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(j?.detail || j?.response || 'Approve failed');
+      }
+
+      // refresh to show the newly-approved agent
+      await refreshAgent();
+      // Optionally clear local key fields
+      // setAgentPriv(''); setAgentAddr('');
+    } catch (e) {
+      setError(e.message || 'Approve failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const revokeAgent = async () => {
+    try {
+      setBusy(true);
+      setError(null);
+
+      if (!connectedAndAuthed) throw new Error('Please sign in with your wallet first.');
+      if (!agent) throw new Error('No agent to revoke.');
+
+      const name = agent.agent_name ?? DEFAULT_AGENT_NAME;
+      if (!name) throw new Error('Missing agent name.');
+
+      const hyperliquidChain = await getHyperliquidChainFromHealth();
+      const nowMs = Date.now();
+
+      const action = {
+        type: 'approveAgent', // reuses same typed struct
+        hyperliquidChain,
+        signatureChainId: toHexChainId(chainId),
+        agentAddress: ZERO_ADDRESS,          // <-- replace with ZERO to revoke
+        agentName: name,
+        nonce: nowMs,
+      };
+
+      const { domain, types, primaryType, message } = buildEip712ForApprove(action, chainId);
+      const sigHex = await signTypedDataAsync({ domain, types, primaryType, message });
+      const recovered = await recoverTypedDataAddress({ domain, types, primaryType, message, signature: sigHex });
+      if (recovered.toLowerCase() !== owner.toLowerCase()) {
+        throw new Error(`Signature recovers to ${recovered}, not your wallet ${owner}`);
+      }
+      const { r, s, v } = splitSigRSV(sigHex);
+
+      const payload = {
+        owner,
+        agent_name: name,
+        approve_request: {
+          action,
+          nonce: nowMs,
+          signature: { r, s, v },
+        },
+      };
+
+      const resp = await fetch('/api/agents/hl/revoke-agent', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const j = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(j?.detail || j?.response || 'Revoke failed');
+
+      // pull fresh state from backend/HL
+      await refreshAgent();
+    } catch (e) {
+      setError(e.message || 'Revoke failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /* ----------------------------- render -------------------------------- */
 
   return (
-    <div className="max-w-xl mx-auto py-12 px-4">
-      <h1 className="text-3xl font-bold mb-6">Profile</h1>
-      {isConnected ? (
-        <div className="space-y-6">
-          <div>
-            <span className="block mb-2 text-lg font-medium">Wallet Connected</span>
-            <span className="block text-sm text-muted-foreground mb-4">{address}</span>
-          </div>
-
-          <div>
-            {hlConnected ? (
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  variant="default"
-                  size="lg"
-                  className="flex items-center gap-3 bg-green-600 hover:bg-green-700 px-6 py-3 text-base min-w-[220px]"
-                  disabled
-                >
-                  <Image src="/hyprliquid.png" alt="Hyperliquid Logo" width={28} height={28} />
-                  Connected to Hyperliquid
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="flex items-center gap-2 px-4 py-3 text-base border-red-500 text-red-500 hover:bg-red-50"
-                  onClick={onDisconnectHyperliquid}
-                >
-                  Disconnect
-                </Button>
-              </div>
-            ) : (
-              <Button
-                variant="outline"
-                size="lg"
-                className="flex items-center gap-3 px-6 py-3 text-base min-w-[220px]"
-                onClick={onConnectHyperliquid}
-                disabled={disabled}
-              >
-                <Image src="/hyprliquid.png" alt="Hyperliquid Logo" width={28} height={28} />
-                Connect to Hyperliquid
-              </Button>
-            )}
-          </div>
-
-          {agentAddr && (
-            <div className="text-sm">
-              Agent address: <span className="font-mono">{agentAddr}</span>
-            </div>
-          )}
-          {status && <div className="text-sm opacity-80 whitespace-pre-wrap">{status}</div>}
-        </div>
-      ) : (
-        <div className="space-y-6">
-          <span className="block mb-2 text-lg font-medium">Connect your wallet to access your profile.</span>
+    <div className="max-w-3xl mx-auto space-y-8 py-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Profile</h1>
+        {!mounted ? (
+          <Button variant="outline" size="lg">Connect Wallet</Button>
+        ) : (
           <ConnectWallet />
-        </div>
+        )}
+      </div>
+
+      {!mounted ? (
+        <p className="text-muted-foreground">Loading…</p>
+      ) : !isConnected ? (
+        <p className="text-muted-foreground">Connect your wallet to manage your agent.</p>
+      ) : !(sessionAddr && sessionAddr.toLowerCase() === (owner ?? '')) ? (
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <p className="text-muted-foreground">
+              You’re connected as <span className="font-mono">{owner}</span>. Please sign in to create a session.
+            </p>
+            <Button onClick={handleSignIn} disabled={authBusy}>
+              {authBusy ? 'Signing…' : 'Sign in with wallet'}
+            </Button>
+            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <Card className="rounded-2xl shadow-sm">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-muted-foreground">Signed in as</div>
+                  <div className="font-mono">{owner}</div>
+                </div>
+                <Image src="/hyprliquid.png" alt="Hyperliquid" width={32} height={32} />
+              </div>
+
+              {/* ===== Agent view (if exists) ===== */}
+              {loadingAgent ? (
+                <div className="text-sm text-muted-foreground">Loading agent…</div>
+              ) : agent ? (
+                <div className="border rounded-xl p-4 flex items-start justify-between gap-4">
+                  <div className="space-y-2">
+                    <div>
+                      <div className="text-xs text-muted-foreground">Name</div>
+                      <div className="font-mono text-sm">{agent.agent_name ?? DEFAULT_AGENT_NAME}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">Address</div>
+                      <div className="font-mono text-xs break-all">{agent.agent_address ?? '—'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">Valid until</div>
+                      <div className="text-sm">
+                        {agent.expiry_unix ? stableUTCFromSeconds(agent.expiry_unix) : '—'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="shrink-0">
+                    <Button variant="destructive" onClick={revokeAgent} disabled={busy}>
+                      {busy ? 'Working…' : 'Revoke'}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                /* ===== No agent -> approval form ===== */
+                <div className="mt-2 space-y-4">
+                  <h2 className="font-medium text-lg">Create / Approve Agent</h2>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <FieldLabel>Agent Private Key (0x…)</FieldLabel>
+                      <TextInput value={agentPriv} onChange={(e) => setAgentPriv(e.target.value)} />
+                      <div className="text-xs text-muted-foreground">
+                        Generated locally. Stored encrypted by backend after approval. Keep it private.
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <FieldLabel>Agent Address</FieldLabel>
+                      <TextInput value={agentAddr} onChange={(e) => setAgentAddr(e.target.value)} />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={handleGenerateKey}>
+                      Generate Agent Key
+                    </Button>
+                    <Button type="button" onClick={approveAgent} disabled={busy}>
+                      {busy ? 'Working…' : 'Approve Agent'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );
