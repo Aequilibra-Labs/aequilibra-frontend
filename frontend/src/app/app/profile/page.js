@@ -1,5 +1,7 @@
 'use client';
 
+//appel API Hyperliquid todo
+
 import { ConnectWallet } from '@/components/wallet/ConnectWallet';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
