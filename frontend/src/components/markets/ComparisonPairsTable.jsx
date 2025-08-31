@@ -38,29 +38,29 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
       );
       
       if (exPair && exPair.price !== undefined && hlPair.markPx !== undefined) {
-        const priceDiff = hlPair.markPx > 0 ? ((exPair.price - hlPair.markPx) / hlPair.markPx) * 100 : 0;
-        const volume24hDiff = hlPair.volume24h > 0 ? ((exPair.volume24h - hlPair.volume24h) / hlPair.volume24h) * 100 : 0;
-        const fundingDiff = exPair.fundingRate !== null && hlPair.funding !== null 
-          ? (exPair.fundingRate - hlPair.funding) * 100 // Convert to basis points for better comparison
-          : null;
+        const priceDiff = (hlPair.markPx || 0) > 0 ? (((exPair.price || 0) - (hlPair.markPx || 0)) / (hlPair.markPx || 1)) * 100 : 0;
+        const volume24hDiff = (hlPair.volume24h || 0) > 0 ? (((exPair.volume24h || 0) - (hlPair.volume24h || 0)) / (hlPair.volume24h || 1)) * 100 : 0;
+        const fundingDiff = (exPair.fundingRate !== null && exPair.fundingRate !== undefined) && (hlPair.funding !== null && hlPair.funding !== undefined)
+          ? ((exPair.fundingRate || 0) - (hlPair.funding || 0)) * 100 // Convert to basis points for better comparison
+          : 0;
 
         combined.push({
           base: hlPair.coin,
           symbol: `${hlPair.coin}/USD`, // Use full pair name to ensure uniqueness
           // Hyperliquid data
           hl: {
-            price: hlPair.markPx,
-            volume24h: hlPair.volume24h,
-            change24h: parseFloat(hlPair.prevDayPx) > 0 ? ((hlPair.markPx - parseFloat(hlPair.prevDayPx)) / parseFloat(hlPair.prevDayPx)) * 100 : 0,
-            fundingRate: hlPair.funding,
+            price: hlPair.markPx || 0,
+            volume24h: hlPair.volume24h || 0,
+            change24h: parseFloat(hlPair.prevDayPx) > 0 ? (((hlPair.markPx || 0) - parseFloat(hlPair.prevDayPx)) / parseFloat(hlPair.prevDayPx)) * 100 : 0,
+            fundingRate: hlPair.funding || 0,
             maxLeverage: hlPair.maxLeverage || 20
           },
           // Extended data
           ex: {
-            price: exPair.price,
-            volume24h: exPair.volume24h,
-            change24h: exPair.change24h,
-            fundingRate: exPair.fundingRate,
+            price: exPair.price || 0,
+            volume24h: exPair.volume24h || 0,
+            change24h: exPair.change24h || 0,
+            fundingRate: exPair.fundingRate || 0,
             maxLeverage: exPair.maxLeverage || 10
           },
           // Comparison metrics
@@ -68,7 +68,7 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
           volume24hDiff,
           fundingDiff,
           // For sorting
-          avgVolume: (hlPair.volume24h + exPair.volume24h) / 2
+          avgVolume: ((hlPair.volume24h || 0) + (exPair.volume24h || 0)) / 2
         });
       }
     });
@@ -229,7 +229,7 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
             </thead>
             <tbody>
               {filteredData.map((pair) => {
-                const priceDiffAbs = Math.abs(pair.priceDiff);
+                const priceDiffAbs = Math.abs(pair.priceDiff || 0);
                 const fundingDiffAbs = Math.abs(pair.fundingDiff || 0);
                 
                 return (
@@ -256,7 +256,7 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
                         <div className="flex items-center justify-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-blue-500" />
                           <span className="font-mono text-sm">
-                            ${pair.hl.price.toLocaleString('en-US', { 
+                            ${(pair.hl.price || 0).toLocaleString('en-US', { 
                               minimumFractionDigits: 2, 
                               maximumFractionDigits: 6 
                             })}
@@ -265,7 +265,7 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
                         <div className="flex items-center justify-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-purple-500" />
                           <span className="font-mono text-sm">
-                            ${pair.ex.price.toLocaleString('en-US', { 
+                            ${(pair.ex.price || 0).toLocaleString('en-US', { 
                               minimumFractionDigits: 2, 
                               maximumFractionDigits: 6 
                             })}
@@ -282,7 +282,7 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
                             ? 'text-yellow-600' 
                             : 'text-green-600'
                       }`}>
-                        {pair.priceDiff > 0 ? '+' : ''}{pair.priceDiff.toFixed(2)}%
+                        {pair.priceDiff > 0 ? '+' : ''}{(pair.priceDiff || 0).toFixed(2)}%
                       </div>
                       {priceDiffAbs > 1 && (
                         <Badge variant="destructive" className="text-xs mt-1">
@@ -296,13 +296,13 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
                         <div className="flex items-center justify-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-blue-500" />
                           <span className="font-mono text-sm">
-                            ${(pair.hl.volume24h / 1000000).toFixed(1)}M
+                            ${((pair.hl.volume24h || 0) / 1000000).toFixed(1)}M
                           </span>
                         </div>
                         <div className="flex items-center justify-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-purple-500" />
                           <span className="font-mono text-sm">
-                            ${(pair.ex.volume24h / 1000000).toFixed(1)}M
+                            ${((pair.ex.volume24h || 0) / 1000000).toFixed(1)}M
                           </span>
                         </div>
                       </div>
@@ -316,7 +316,7 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
                             pair.hl.fundingRate > 0 ? 'text-green-600' : 'text-red-600'
                           }`}>
                             {pair.hl.fundingRate !== null 
-                              ? `${pair.hl.fundingRate > 0 ? '+' : ''}${pair.hl.fundingRate.toFixed(3)}%`
+                              ? `${pair.hl.fundingRate > 0 ? '+' : ''}${(pair.hl.fundingRate || 0).toFixed(3)}%`
                               : 'N/A'
                             }
                           </span>
@@ -327,14 +327,14 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
                             pair.ex.fundingRate > 0 ? 'text-green-600' : 'text-red-600'
                           }`}>
                             {pair.ex.fundingRate !== null 
-                              ? `${pair.ex.fundingRate > 0 ? '+' : ''}${pair.ex.fundingRate.toFixed(3)}%`
+                              ? `${pair.ex.fundingRate > 0 ? '+' : ''}${(pair.ex.fundingRate || 0).toFixed(3)}%`
                               : 'N/A'
                             }
                           </span>
                         </div>
                         {pair.fundingDiff !== null && fundingDiffAbs > 5 && (
                           <Badge variant={fundingDiffAbs > 10 ? "destructive" : "secondary"} className="text-xs mt-1">
-                            {fundingDiffAbs.toFixed(1)}bp diff
+                            {(fundingDiffAbs || 0).toFixed(1)}bp diff
                           </Badge>
                         )}
                       </div>

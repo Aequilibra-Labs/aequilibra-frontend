@@ -294,7 +294,7 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                           <span className={`font-mono text-sm ${
                             item.hl.dailyFundingRate > 0 ? 'text-green-600' : 'text-red-600'
                           }`}>
-                            {item.hl.dailyFundingRate > 0 ? '+' : ''}{item.hl.dailyFundingRate.toFixed(2)}%
+                            {item.hl.dailyFundingRate > 0 ? '+' : ''}{(item.hl.dailyFundingRate || 0).toFixed(2)}%
                           </span>
                         </div>
                         <div className="flex items-center justify-center gap-2">
@@ -302,7 +302,7 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                           <span className={`font-mono text-sm ${
                             item.ex.dailyFundingRate > 0 ? 'text-green-600' : 'text-red-600'
                           }`}>
-                            {item.ex.dailyFundingRate > 0 ? '+' : ''}{item.ex.dailyFundingRate.toFixed(2)}%
+                            {item.ex.dailyFundingRate > 0 ? '+' : ''}{(item.ex.dailyFundingRate || 0).toFixed(2)}%
                           </span>
                         </div>
                       </div>
@@ -363,7 +363,7 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                             </div>
                           )}
                           <Badge variant="secondary" className="text-xs">
-                            {fundingDiffAbs.toFixed(0)}bp/8h
+                            {(fundingDiffAbs || 0).toFixed(0)}bp/8h
                           </Badge>
                         </div>
                       ) : (

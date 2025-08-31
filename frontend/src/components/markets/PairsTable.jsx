@@ -186,7 +186,7 @@ export function PairsTable({ searchQuery = '' }) {
                     </td>                                      
                     <td className="p-4 text-right font-mono text-lg font-semibold">
                       <span className="transition-all duration-300 hover:scale-105">
-                        ${pair.price.toLocaleString('en-US', { 
+                        ${(pair.price || 0).toLocaleString('en-US', { 
                           minimumFractionDigits: 2, 
                           maximumFractionDigits: 6 
                         })}
@@ -203,13 +203,13 @@ export function PairsTable({ searchQuery = '' }) {
                           <TrendingDown className="h-4 w-4" />
                         )}
                         <span className="font-semibold text-base">
-                          {isPositiveChange ? '+' : ''}{pair.change24h.toFixed(2)}%
+                          {isPositiveChange ? '+' : ''}{(pair.change24h || 0).toFixed(2)}%
                         </span>
                       </div>
                     </td>
                     
                     <td className="p-4 text-right font-mono font-medium text-base">
-                      ${(pair.volume24h / 1000000).toFixed(1)}M
+                      ${((pair.volume24h || 0) / 1000000).toFixed(1)}M
                     </td>
                     
                     <td className="p-4 text-right">
@@ -217,7 +217,7 @@ export function PairsTable({ searchQuery = '' }) {
                         <span className={`font-semibold text-base ${
                           isPositiveFunding ? 'text-green-600' : 'text-red-600'
                         }`}>
-                          {isPositiveFunding ? '+' : ''}{pair.fundingRate.toFixed(3)}%
+                          {isPositiveFunding ? '+' : ''}{(pair.fundingRate || 0).toFixed(3)}%
                         </span>
                       ) : (
                         <span className="text-muted-foreground font-medium">N/A</span>
