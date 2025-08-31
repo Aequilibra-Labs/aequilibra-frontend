@@ -192,6 +192,13 @@ export default function ProfilePage() {
     owner &&
     sessionAddr.toLowerCase() === owner.toLowerCase();
 
+  /* --------------------------- Extended (x10) state -------------------- */
+  const [extAccountIndex, setExtAccountIndex] = useState(0);
+  const [extDescription, setExtDescription] = useState('aeq-prod trading key');
+  const [extBusy, setExtBusy] = useState(false);
+  const [extError, setExtError] = useState(null);
+  const [extResult, setExtResult] = useState(null); // { exists?:true, created?:true, account_id }
+
   /* --------------------------- actions -------------------------------- */
 
   // Only generate agent private/public keypair
@@ -362,6 +369,85 @@ export default function ProfilePage() {
     }
   };
 
+  /* ---------------------- Extended (x10) actions ----------------------- */
+
+  // personal_sign a challenge string "<path>@<time>"
+  const personalSign = async (message) => {
+    return signMessageAsync({ message });
+  };
+
+  const extendedCheckOrCreate = async () => {
+    try {
+      setExtBusy(true);
+      setExtError(null);
+      setExtResult(null);
+
+      if (!connectedAndAuthed) throw new Error('Please sign in with your wallet first.');
+
+      // 1) get challenge for /api/v1/user/accounts
+      const path1 = '/api/v1/user/accounts';
+      const c1 = await fetch(`/api/extended/challenge?path=${encodeURIComponent(path1)}`, { cache: 'no-store' }).then(r => r.json());
+      if (!c1?.message || !c1?.time) throw new Error('Invalid challenge from backend');
+
+      const sig1 = await personalSign(c1.message);
+
+      // 2) ask backend to check or request second signature
+      let r = await fetch('/api/extended/check-or-create-api-key', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          owner,
+          signature: sig1,
+          time: c1.time,
+          account_index: Number(extAccountIndex || 0),
+          description: extDescription || undefined,
+        }),
+      });
+
+      if (r.status === 200) {
+        const j = await r.json();
+        setExtResult(j); // {exists:true, account_id}
+        return;
+      }
+      if (r.status !== 428) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(j?.detail || 'Extended check failed');
+      }
+
+      // 3) second challenge for /api/v1/user/account/api-key
+      const j428 = await r.json(); // { detail: { challenge, account_id, ... } }
+      const challenge = j428?.detail?.challenge;
+      const accountId = j428?.detail?.account_id;
+      if (!challenge) throw new Error('No second challenge provided by backend');
+      const sig2 = await personalSign(challenge);
+
+      const [_, t2] = challenge.split('@');
+
+      // 4) create the API key (backend will encrypt & store)
+      const r2 = await fetch('/api/extended/create-api-key', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          owner,
+          signature: sig1,
+          time: c1.time,
+          account_index: Number(extAccountIndex || 0),
+          description: extDescription || undefined,
+          signature2: sig2,
+          time2: t2,
+        }),
+      });
+
+      const j2 = await r2.json().catch(() => ({}));
+      if (!r2.ok) throw new Error(j2?.detail || 'Extended create failed');
+      setExtResult(j2); // {created:true, account_id}
+    } catch (e) {
+      setExtError(e.message || 'Extended flow failed');
+    } finally {
+      setExtBusy(false);
+    }
+  };
+
   /* ----------------------------- render -------------------------------- */
 
   return (
@@ -393,6 +479,7 @@ export default function ProfilePage() {
         </Card>
       ) : (
         <>
+          {/* ========================= HL Agent card ========================= */}
           <Card className="rounded-2xl shadow-sm">
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center justify-between">
@@ -461,6 +548,74 @@ export default function ProfilePage() {
               )}
 
               {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            </CardContent>
+          </Card>
+
+          {/* ======================= Extended (x10) card ===================== */}
+          <Card className="rounded-2xl shadow-sm">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="text-sm text-muted-foreground">Extended API Key</div>
+                  <div className="text-xs text-muted-foreground">
+                    Mainnet enforced server-side. Key will be visible in Extended UI (description helps identify).
+                  </div>
+                </div>
+                <Image src="/extended.png" alt="Extended" width={32} height={32} />
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <FieldLabel>Account Index</FieldLabel>
+                  <TextInput
+                    type="number"
+                    min={0}
+                    value={extAccountIndex}
+                    onChange={(e) => setExtAccountIndex(Number(e.target.value || 0))}
+                  />
+                  <div className="text-xs text-muted-foreground">
+                    Use 0 for default; other subaccounts via 1, 2, …
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel>Description</FieldLabel>
+                  <TextInput
+                    value={extDescription}
+                    onChange={(e) => setExtDescription(e.target.value)}
+                    placeholder="aeq-prod trading key"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button type="button" onClick={extendedCheckOrCreate} disabled={extBusy}>
+                  {extBusy ? 'Working…' : 'Check / Create API Key'}
+                </Button>
+              </div>
+
+              {extResult ? (
+                <div className="mt-2 border rounded-xl p-4">
+                  {'exists' in extResult && extResult.exists ? (
+                    <div>
+                      <div className="text-sm">An API key already exists for this account.</div>
+                      <div className="text-xs text-muted-foreground">
+                        account_id: <span className="font-mono">{extResult.account_id}</span>
+                      </div>
+                    </div>
+                  ) : 'created' in extResult && extResult.created ? (
+                    <div>
+                      <div className="text-sm">API key created successfully.</div>
+                      <div className="text-xs text-muted-foreground">
+                        account_id: <span className="font-mono">{extResult.account_id}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm">Done.</div>
+                  )}
+                </div>
+              ) : null}
+
+              {extError ? <p className="text-sm text-red-600">{extError}</p> : null}
             </CardContent>
           </Card>
         </>
