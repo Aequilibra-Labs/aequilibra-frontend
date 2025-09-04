@@ -9,14 +9,20 @@ function bases() {
   return [...new Set(list)];
 }
 
-export async function POST(req) {
-  const body = await req.text();
+function urlFor(base, req, path) {
+  const inUrl = new URL(req.url);
+  const out = new URL(`${base}${path}`);
+  out.search = inUrl.search;
+  return out.toString();
+}
+
+export async function GET(req) {
   for (const base of bases()) {
     try {
-      const r = await fetch(`${base}/extended/check-or-create-api-key`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', cookie: req.headers.get('cookie') || '' },
-        body,
+      const url = urlFor(base, req, '/extended/typed-data/registration');
+      const r = await fetch(url, {
+        headers: { cookie: req.headers.get('cookie') || '' },
+        cache: 'no-store',
       });
       const text = await r.text();
       const headers = new Headers({ 'content-type': r.headers.get('content-type') ?? 'application/json' });

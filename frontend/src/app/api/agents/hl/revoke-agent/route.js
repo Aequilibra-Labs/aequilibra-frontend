@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
   const body = await request.json();
-  return proxyJson(request, '/hl/revoke-agent', {
+  return proxyJson(request, '/agents/hl/revoke-agent', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),

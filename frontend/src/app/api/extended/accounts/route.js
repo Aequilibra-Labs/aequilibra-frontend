@@ -9,14 +9,12 @@ function bases() {
   return [...new Set(list)];
 }
 
-export async function POST(req) {
-  const body = await req.text();
+export async function GET(req) {
   for (const base of bases()) {
     try {
-      const r = await fetch(`${base}/extended/check-or-create-api-key`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', cookie: req.headers.get('cookie') || '' },
-        body,
+      const r = await fetch(`${base}/extended/accounts`, {
+        headers: { cookie: req.headers.get('cookie') || '' },
+        cache: 'no-store',
       });
       const text = await r.text();
       const headers = new Headers({ 'content-type': r.headers.get('content-type') ?? 'application/json' });

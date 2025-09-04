@@ -13,7 +13,7 @@ export async function POST(req) {
   const body = await req.text();
   for (const base of bases()) {
     try {
-      const r = await fetch(`${base}/extended/check-or-create-api-key`, {
+      const r = await fetch(`${base}/extended/onboarding/subaccount`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', cookie: req.headers.get('cookie') || '' },
         body,

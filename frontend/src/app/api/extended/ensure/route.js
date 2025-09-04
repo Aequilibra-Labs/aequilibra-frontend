@@ -10,10 +10,10 @@ function bases() {
 }
 
 export async function POST(req) {
-  const body = await req.text();
+  const body = await req.text(); // passthrough (can be empty)
   for (const base of bases()) {
     try {
-      const r = await fetch(`${base}/extended/check-or-create-api-key`, {
+      const r = await fetch(`${base}/extended/ensure`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', cookie: req.headers.get('cookie') || '' },
         body,

@@ -23,9 +23,7 @@ export async function POST(req) {
       const setCookie = r.headers.get('set-cookie');
       if (setCookie) headers.set('set-cookie', setCookie);
       return new Response(text, { status: r.status, headers });
-    } catch (e) {
-      // try next base
-    }
+    } catch {}
   }
   return new Response(JSON.stringify({ detail: 'Proxy error: fetch failed' }), {
     status: 502, headers: { 'content-type': 'application/json' },

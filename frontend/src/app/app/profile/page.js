@@ -2,43 +2,22 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
 import { useAccount, useChainId, useSignMessage, useSignTypedData } from 'wagmi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ConnectWallet } from '@/components/wallet/ConnectWallet';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { recoverTypedDataAddress } from 'viem';
-import Image from 'next/image';
-
-/* ------------------------ tiny local UI helpers ----------------------- */
-function FieldLabel(props) {
-  return (
-    <label
-      {...props}
-      className={['text-sm font-medium leading-none', props.className || ''].join(' ')}
-    />
-  );
-}
-function TextInput({ className = '', type = 'text', ...props }) {
-  return (
-    <input
-      type={type}
-      className={[
-        'flex h-10 w-full rounded-md border border-gray-300 bg-white',
-        'px-3 py-2 text-sm placeholder:text-gray-400',
-        'focus:outline-none focus:ring-2 focus:ring-black/10',
-        'disabled:cursor-not-allowed disabled:opacity-50',
-        className,
-      ].join(' ')}
-      {...props}
-    />
-  );
-}
 
 /* --------------------------- constants -------------------------------- */
 const DEFAULT_AGENT_NAME = 'aeq-agent';
 const DEFAULT_TTL_SECONDS = 180 * 24 * 60 * 60; // 180 days
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
+const EXTENDED_INDEX = 9;                       // required subaccount index
+const EXTENDED_NAME  = 'aeq-prod trading key';  // required subaccount name/description
 
 /* --------------------------- SIWE helpers ----------------------------- */
 function buildSiweMessage({ address, nonce, chainId, domain, uri }) {
@@ -54,11 +33,7 @@ Issued At: ${issuedAt}`;
 }
 
 /* --------------------------- HL helpers ------------------------------- */
-function toHexChainId(n) {
-  return '0x' + Number(n).toString(16);
-}
-
-// keep v as 27/28 (NOT 0/1)
+function toHexChainId(n) { return '0x' + Number(n).toString(16); }
 function splitSigRSV(sigHex) {
   const s = sigHex.slice(2);
   const r = '0x' + s.slice(0, 64);
@@ -67,21 +42,19 @@ function splitSigRSV(sigHex) {
   if (v < 27) v += 27;
   return { r, s: sPart, v };
 }
-
-// EIP-712 typed data for Hyperliquid ApproveAgent
 function buildEip712ForApprove(action, evmChainIdNumber) {
   const domain = {
     name: 'HyperliquidSignTransaction',
     version: '1',
-    chainId: evmChainIdNumber, // number (e.g., 42161)
+    chainId: evmChainIdNumber,
     verifyingContract: '0x0000000000000000000000000000000000000000',
   };
   const types = {
     'HyperliquidTransaction:ApproveAgent': [
-      { name: 'hyperliquidChain', type: 'string' },  // "Mainnet" | "Testnet"
-      { name: 'agentAddress', type: 'address' },     // 0x...
-      { name: 'agentName', type: 'string' },         // can be empty
-      { name: 'nonce', type: 'uint64' },             // equals outer nonce
+      { name: 'hyperliquidChain', type: 'string' },
+      { name: 'agentAddress', type: 'address' },
+      { name: 'agentName', type: 'string' },
+      { name: 'nonce', type: 'uint64' },
     ],
   };
   const primaryType = 'HyperliquidTransaction:ApproveAgent';
@@ -93,7 +66,6 @@ function buildEip712ForApprove(action, evmChainIdNumber) {
   };
   return { domain, types, primaryType, message };
 }
-
 async function getHyperliquidChainFromHealth() {
   try {
     const r = await fetch('/api/health', { cache: 'no-store' });
@@ -101,9 +73,7 @@ async function getHyperliquidChainFromHealth() {
     const url = j?.exchange_url || '';
     if (!url) return 'Mainnet';
     return url.includes('test') ? 'Testnet' : 'Mainnet';
-  } catch {
-    return 'Mainnet';
-  }
+  } catch { return 'Mainnet'; }
 }
 
 /* --------------------- deterministic date formatting ------------------ */
@@ -123,7 +93,6 @@ export default function ProfilePage() {
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-
   const owner = useMemo(() => address?.toLowerCase() ?? null, [address]);
 
   // session
@@ -133,18 +102,13 @@ export default function ProfilePage() {
       const res = await fetch('/api/auth/session', { cache: 'no-store' });
       const data = await res.json();
       setSessionAddr(data?.address || null);
-    } catch {
-      setSessionAddr(null);
-    }
+    } catch { setSessionAddr(null); }
   };
-  useEffect(() => {
-    if (mounted) refreshSession();
-  }, [mounted]);
+  useEffect(() => { if (mounted) refreshSession(); }, [mounted]);
 
-  // single agent (HL)
+  // HL agent
   const [agent, setAgent] = useState(null);
   const [loadingAgent, setLoadingAgent] = useState(false);
-
   const refreshAgent = async () => {
     if (!owner) return;
     try {
@@ -152,78 +116,244 @@ export default function ProfilePage() {
       const res = await fetch(`/api/agents/hl?owner=${owner}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        if (data && (data.agent_address || data.agent_name || data.expiry_unix)) {
-          setAgent(data);
-        } else {
-          setAgent(null);
-        }
+        setAgent(data && (data.agent_address || data.agent_name || data.expiry_unix) ? data : null);
       } else if (res.status === 404) {
         setAgent(null);
       } else {
-        // fallback to list route if your backend doesn't have /agents/hl
         const resList = await fetch(`/api/agents?owner=${owner}`, { cache: 'no-store' });
         const list = await resList.json().catch(() => []);
         setAgent(Array.isArray(list) && list.length ? list[0] : null);
       }
-    } catch {
-      setAgent(null);
-    } finally {
-      setLoadingAgent(false);
-    }
+    } catch { setAgent(null); }
+    finally { setLoadingAgent(false); }
   };
-
-  useEffect(() => {
-    if (owner) refreshAgent();
-    else setAgent(null);
-  }, [owner]);
-
-  // form state (only keys are user-visible)
-  const [agentPriv, setAgentPriv] = useState('');
-  const [agentAddr, setAgentAddr] = useState('');
 
   const [busy, setBusy] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [error, setError] = useState(null);
 
   const connectedAndAuthed =
-    mounted &&
-    isConnected &&
-    sessionAddr &&
-    owner &&
+    mounted && isConnected && sessionAddr && owner &&
     sessionAddr.toLowerCase() === owner.toLowerCase();
 
   /* --------------------------- Extended (x10) state -------------------- */
-  const [extAccountIndex, setExtAccountIndex] = useState(0);
-  const [extDescription, setExtDescription] = useState('aeq-prod trading key');
   const [extBusy, setExtBusy] = useState(false);
   const [extError, setExtError] = useState(null);
-  const [extResult, setExtResult] = useState(null); // { exists?:true, created?:true, account_id }
+  const [extStatus, setExtStatus] = useState(null);
+  const [extResult, setExtResult] = useState(null); // { exists/created, client_id }
+  const [extKeyInfo, setExtKeyInfo] = useState(null); // record from /api/extended/agents
 
-  /* --------------------------- actions -------------------------------- */
-
-  // Only generate agent private/public keypair
-  const handleGenerateKey = () => {
-    const pk = generatePrivateKey(); // 0x...
-    const acct = privateKeyToAccount(pk);
-    setAgentPriv(pk);
-    setAgentAddr(acct.address);
+  /* ---------------------- Extended helpers ----------------------------- */
+  const personalSign = (message) => signMessageAsync({ message });
+  const fetchJsonOrThrow = async (res, fallback='Request failed') => {
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(j?.detail || fallback);
+    return j;
+  };
+  const signTypedDataAndVerify = async (typedData, ownerAddr) => {
+    const { domain, types, primaryType, message } = typedData || {};
+    const sig = await signTypedDataAsync({ domain, types, primaryType, message });
+    const recovered = await recoverTypedDataAddress({ domain, types, primaryType, message, signature: sig });
+    if (!ownerAddr || recovered.toLowerCase() !== ownerAddr.toLowerCase()) {
+      throw new Error(`Typed-data signature recovers to ${recovered}, not your wallet ${ownerAddr}`);
+    }
+    return sig;
   };
 
+  // Extended: load keystore-backed record (owner only, like HL)
+  const refreshExtended = async () => {
+    if (!owner) { setExtKeyInfo(null); return null; }
+    try {
+      const r = await fetch(`/api/extended/agents?owner=${owner}`, { cache: 'no-store' });
+      if (r.status === 404) { setExtKeyInfo(null); return null; }
+      if (!r.ok)        { setExtKeyInfo(null); return null; }
+      const j = await r.json();
+      setExtKeyInfo(j);
+      return j;
+    } catch {
+      setExtKeyInfo(null);
+      return null;
+    }
+  };
+
+  // Load both HL and Extended as soon as wallet is known
+  useEffect(() => {
+    if (owner) {
+      refreshAgent();
+      refreshExtended();
+    } else {
+      setAgent(null);
+      setExtKeyInfo(null);
+    }
+  }, [owner]);
+
+  /* ----------------- ONE BUTTON: onboard → sub(1) → API(1) ------------- */
+  const setupExtendedIndex1 = async () => {
+    try {
+      setExtBusy(true);
+      setExtError(null);
+      setExtResult(null);
+      setExtStatus('Starting Extended setup…');
+
+      if (!connectedAndAuthed) throw new Error('Please sign in with your wallet first.');
+
+      // If the record already exists, stop early
+      const existing = await refreshExtended();
+      if (existing && (existing.api_key || existing.has_api_key)) {
+        setExtResult({ exists: true, client_id: existing.client_id });
+        setExtStatus('Extended key already present.');
+        return;
+      }
+
+      // 1) Onboard default account (index 0)
+      setExtStatus('1/3 Onboarding default account (index 0)…');
+      try {
+        const tdKD0 = await fetch(
+          `/api/extended/typed-data/key-derivation?wallet=${owner}&account_index=0`,
+          { cache: 'no-store' }
+        ).then(r => fetchJsonOrThrow(r, 'Failed TD: key-derivation (0)'));
+        const sigKD0 = await signTypedDataAndVerify(tdKD0, owner);
+
+        const tdREG0 = await fetch(
+          `/api/extended/typed-data/registration?wallet=${owner}&account_index=0&action=REGISTER`,
+          { cache: 'no-store' }
+        ).then(r => fetchJsonOrThrow(r, 'Failed TD: registration (0)'));
+        const sigREG0 = await signTypedDataAndVerify(tdREG0, owner);
+        const time0 = tdREG0?.message?.time;
+
+        const r0 = await fetch('/api/extended/onboarding', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            wallet: owner,
+            account_index: 0,
+            key_derivation_signature: sigKD0,
+            registration_signature: sigREG0,
+            registration_time: time0,
+          }),
+        });
+        if (!r0.ok) {
+          const txt = await r0.text();
+          if (!/already|exists|onboard/i.test(txt)) throw new Error(txt || 'Onboarding failed');
+        }
+      } catch (e) {
+        if (!String(e?.message || '').match(/already|exists|onboard/i)) throw e;
+      }
+
+      // 2) Create subaccount (index 1) named EXTENDED_NAME
+      setExtStatus('2/3 Creating subaccount (index 1)…');
+      try {
+        const tdKD = await fetch(
+          `/api/extended/typed-data/key-derivation?wallet=${owner}&account_index=${EXTENDED_INDEX}`,
+          { cache: 'no-store' }
+        ).then(r => fetchJsonOrThrow(r, 'Failed TD: key-derivation (1)'));
+        const sigKD = await signTypedDataAndVerify(tdKD, owner);
+
+        const tdREG = await fetch(
+          `/api/extended/typed-data/registration?wallet=${owner}&account_index=${EXTENDED_INDEX}&action=CREATE_SUB_ACCOUNT`,
+          { cache: 'no-store' }
+        ).then(r => fetchJsonOrThrow(r, 'Failed TD: registration (1)'));
+        const sigREG = await signTypedDataAndVerify(tdREG, owner);
+        const regTime = tdREG?.message?.time;
+
+        const challenge = await fetch(
+          `/api/extended/challenge?path=${encodeURIComponent('/auth/onboard/subaccount')}`,
+          { cache: 'no-store' }
+        ).then(r => fetchJsonOrThrow(r, 'Failed subaccount auth challenge'));
+        const authSig = await personalSign(challenge.message);
+
+        const rSub = await fetch('/api/extended/onboarding/subaccount', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            wallet: owner,
+            account_index: EXTENDED_INDEX,
+            description: EXTENDED_NAME,
+            key_derivation_signature: sigKD,
+            registration_signature: sigREG,
+            registration_time: regTime,
+            auth_time: challenge.time,
+            auth_signature: authSig,
+          }),
+        });
+        if (!rSub.ok) {
+          const txt = await rSub.text();
+          if (!/exists|already|409/i.test(txt)) throw new Error(txt || 'Subaccount creation failed');
+        }
+      } catch (e) {
+        if (!String(e?.message || '').match(/exists|already|409/i)) throw e;
+      }
+
+      // 3) Create API key for subaccount 1 (2-step challenge)
+      setExtStatus('3/3 Creating API key (index 1)…');
+      const path1 = '/api/v1/user/accounts';
+      const c1 = await fetch(`/api/extended/challenge?path=${encodeURIComponent(path1)}`, { cache: 'no-store' })
+        .then(r => fetchJsonOrThrow(r, 'Invalid challenge for /accounts'));
+      const sig1 = await personalSign(c1.message);
+
+      let r = await fetch('/api/extended/check-or-create-api-key', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          owner,
+          signature: sig1,
+          time: c1.time,
+          account_index: EXTENDED_INDEX,
+          description: EXTENDED_NAME,
+        }),
+      });
+
+      if (r.status === 200) {
+        const j = await r.json();
+        setExtResult({ exists: true, client_id: j.account_id ?? j.client_id });
+        setExtStatus('API key already existed.');
+        await refreshExtended();
+        return;
+      }
+      if (r.status !== 428) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(j?.detail || 'Extended check failed');
+      }
+
+      const j428 = await r.json();
+      const challenge2 = j428?.detail?.challenge;
+      if (!challenge2) throw new Error('No second challenge provided');
+      const sig2 = await personalSign(challenge2);
+      const [, t2] = challenge2.split('@');
+
+      const r2 = await fetch('/api/extended/create-api-key', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          owner,
+          signature: sig1,
+          time: c1.time,
+          account_index: EXTENDED_INDEX,
+          description: EXTENDED_NAME,
+          signature2: sig2,
+          time2: t2,
+        }),
+      });
+      const j2 = await fetchJsonOrThrow(r2, 'Extended create failed');
+      setExtResult({ created: true, client_id: j2.account_id ?? j2.client_id });
+      setExtStatus('Extended API key created.');
+      await refreshExtended();
+    } catch (e) {
+      setExtError(e.message || 'Extended setup failed');
+      setExtStatus(null);
+    } finally {
+      setExtBusy(false);
+    }
+  };
+
+  /* --------------------------- actions -------------------------------- */
   const handleSignIn = async () => {
     try {
       setAuthBusy(true);
       setError(null);
-      const n = await fetch('/api/auth/nonce', { cache: 'no-store' }).then((r) => r.json());
-      if (!n?.nonce || !n?.domain || !n?.uri) {
-        throw new Error('Invalid nonce payload from backend');
-      }
-      const msg = buildSiweMessage({
-        address: owner,
-        nonce: n.nonce,
-        chainId,
-        domain: n.domain,
-        uri: n.uri,
-      });
+      const n = await fetch('/api/auth/nonce', { cache: 'no-store' }).then(r => r.json());
+      if (!n?.nonce || !n?.domain || !n?.uri) throw new Error('Invalid nonce payload');
+      const msg = buildSiweMessage({ address: owner, nonce: n.nonce, chainId, domain: n.domain, uri: n.uri });
       const signature = await signMessageAsync({ message: msg });
       const r = await fetch('/api/auth/verify', {
         method: 'POST',
@@ -236,100 +366,72 @@ export default function ProfilePage() {
       }
       await refreshSession();
       await refreshAgent();
+      await refreshExtended(); // also refresh Extended on sign-in
     } catch (e) {
       setError(e.message || 'Sign-in failed');
-    } finally {
-      setAuthBusy(false);
-    }
+    } finally { setAuthBusy(false); }
   };
 
-  const approveAgent = async () => {
+  // HL: Create + Approve
+  const createAndApproveAgent = async () => {
     try {
-      setBusy(true);
-      setError(null);
-
+      setBusy(true); setError(null);
       if (!connectedAndAuthed) throw new Error('Please sign in with your wallet first.');
-      if (!agentPriv || !agentAddr) {
-        throw new Error('Missing agent private key or address.');
-      }
 
+      const agentPriv = generatePrivateKey();
+      const agentAddr = privateKeyToAccount(agentPriv).address.toLowerCase();
       const hyperliquidChain = await getHyperliquidChainFromHealth();
       const nowMs = Date.now();
-
       const action = {
         type: 'approveAgent',
         hyperliquidChain,
-        signatureChainId: toHexChainId(chainId), // e.g., "0xa4b1"
-        agentAddress: agentAddr.toLowerCase(),
+        signatureChainId: toHexChainId(chainId),
+        agentAddress: agentAddr,
         agentName: DEFAULT_AGENT_NAME,
-        nonce: nowMs, // must equal outer nonce
+        nonce: nowMs,
       };
 
-      // Build & sign typed data (owner wallet)
       const { domain, types, primaryType, message } = buildEip712ForApprove(action, chainId);
       const sigHex = await signTypedDataAsync({ domain, types, primaryType, message });
-
-      // Verify locally we recover the connected wallet
       const recovered = await recoverTypedDataAddress({ domain, types, primaryType, message, signature: sigHex });
       if (recovered.toLowerCase() !== owner.toLowerCase()) {
         throw new Error(`Signature recovers to ${recovered}, not your wallet ${owner}`);
       }
-
       const { r, s, v } = splitSigRSV(sigHex);
-
-      const payload = {
-        owner,
-        agent_name: DEFAULT_AGENT_NAME,
-        agent_privkey_hex: agentPriv,
-        agent_address: agentAddr.toLowerCase(),
-        ttl_seconds: DEFAULT_TTL_SECONDS, // fixed 180 days (hidden)
-        approve_request: {
-          action,
-          nonce: nowMs, // equals action.nonce
-          signature: { r, s, v },
-        },
-      };
 
       const resp = await fetch('/api/agents/hl/approve-agent', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          owner,
+          agent_name: DEFAULT_AGENT_NAME,
+          agent_privkey_hex: agentPriv,
+          agent_address: agentAddr,
+          ttl_seconds: DEFAULT_TTL_SECONDS,
+          approve_request: { action, nonce: nowMs, signature: { r, s, v } },
+        }),
       });
       const j = await resp.json().catch(() => ({}));
-      if (!resp.ok) {
-        throw new Error(j?.detail || j?.response || 'Approve failed');
-      }
-
-      // refresh to show the newly-approved agent
+      if (!resp.ok) throw new Error(j?.detail || j?.response || 'Approve failed');
       await refreshAgent();
-      // Optionally clear local key fields
-      // setAgentPriv(''); setAgentAddr('');
-    } catch (e) {
-      setError(e.message || 'Approve failed');
-    } finally {
-      setBusy(false);
-    }
+    } catch (e) { setError(e.message || 'Approve failed'); }
+    finally { setBusy(false); }
   };
 
   const revokeAgent = async () => {
     try {
-      setBusy(true);
-      setError(null);
-
+      setBusy(true); setError(null);
       if (!connectedAndAuthed) throw new Error('Please sign in with your wallet first.');
       if (!agent) throw new Error('No agent to revoke.');
 
       const name = agent.agent_name ?? DEFAULT_AGENT_NAME;
-      if (!name) throw new Error('Missing agent name.');
-
       const hyperliquidChain = await getHyperliquidChainFromHealth();
       const nowMs = Date.now();
-
       const action = {
-        type: 'approveAgent', // reuses same typed struct
+        type: 'approveAgent',
         hyperliquidChain,
         signatureChainId: toHexChainId(chainId),
-        agentAddress: ZERO_ADDRESS,          // <-- replace with ZERO to revoke
+        agentAddress: ZERO_ADDRESS,
         agentName: name,
         nonce: nowMs,
       };
@@ -342,123 +444,30 @@ export default function ProfilePage() {
       }
       const { r, s, v } = splitSigRSV(sigHex);
 
-      const payload = {
-        owner,
-        agent_name: name,
-        approve_request: {
-          action,
-          nonce: nowMs,
-          signature: { r, s, v },
-        },
-      };
-
       const resp = await fetch('/api/agents/hl/revoke-agent', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          owner,
+          agent_name: name,
+          approve_request: { action, nonce: nowMs, signature: { r, s, v } },
+        }),
       });
       const j = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(j?.detail || j?.response || 'Revoke failed');
-
-      // pull fresh state from backend/HL
       await refreshAgent();
-    } catch (e) {
-      setError(e.message || 'Revoke failed');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  /* ---------------------- Extended (x10) actions ----------------------- */
-
-  // personal_sign a challenge string "<path>@<time>"
-  const personalSign = async (message) => {
-    return signMessageAsync({ message });
-  };
-
-  const extendedCheckOrCreate = async () => {
-    try {
-      setExtBusy(true);
-      setExtError(null);
-      setExtResult(null);
-
-      if (!connectedAndAuthed) throw new Error('Please sign in with your wallet first.');
-
-      // 1) get challenge for /api/v1/user/accounts
-      const path1 = '/api/v1/user/accounts';
-      const c1 = await fetch(`/api/extended/challenge?path=${encodeURIComponent(path1)}`, { cache: 'no-store' }).then(r => r.json());
-      if (!c1?.message || !c1?.time) throw new Error('Invalid challenge from backend');
-
-      const sig1 = await personalSign(c1.message);
-
-      // 2) ask backend to check or request second signature
-      let r = await fetch('/api/extended/check-or-create-api-key', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          owner,
-          signature: sig1,
-          time: c1.time,
-          account_index: Number(extAccountIndex || 0),
-          description: extDescription || undefined,
-        }),
-      });
-
-      if (r.status === 200) {
-        const j = await r.json();
-        setExtResult(j); // {exists:true, account_id}
-        return;
-      }
-      if (r.status !== 428) {
-        const j = await r.json().catch(() => ({}));
-        throw new Error(j?.detail || 'Extended check failed');
-      }
-
-      // 3) second challenge for /api/v1/user/account/api-key
-      const j428 = await r.json(); // { detail: { challenge, account_id, ... } }
-      const challenge = j428?.detail?.challenge;
-      const accountId = j428?.detail?.account_id;
-      if (!challenge) throw new Error('No second challenge provided by backend');
-      const sig2 = await personalSign(challenge);
-
-      const [_, t2] = challenge.split('@');
-
-      // 4) create the API key (backend will encrypt & store)
-      const r2 = await fetch('/api/extended/create-api-key', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          owner,
-          signature: sig1,
-          time: c1.time,
-          account_index: Number(extAccountIndex || 0),
-          description: extDescription || undefined,
-          signature2: sig2,
-          time2: t2,
-        }),
-      });
-
-      const j2 = await r2.json().catch(() => ({}));
-      if (!r2.ok) throw new Error(j2?.detail || 'Extended create failed');
-      setExtResult(j2); // {created:true, account_id}
-    } catch (e) {
-      setExtError(e.message || 'Extended flow failed');
-    } finally {
-      setExtBusy(false);
-    }
+    } catch (e) { setError(e.message || 'Revoke failed'); }
+    finally { setBusy(false); }
   };
 
   /* ----------------------------- render -------------------------------- */
+  const apiKeyReady = !!(extKeyInfo?.api_key || extKeyInfo?.has_api_key);
 
   return (
     <div className="max-w-3xl mx-auto space-y-8 py-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Profile</h1>
-        {!mounted ? (
-          <Button variant="outline" size="lg">Connect Wallet</Button>
-        ) : (
-          <ConnectWallet />
-        )}
+        {!mounted ? <Button variant="outline" size="lg">Connect Wallet</Button> : <ConnectWallet />}
       </div>
 
       {!mounted ? (
@@ -466,17 +475,15 @@ export default function ProfilePage() {
       ) : !isConnected ? (
         <p className="text-muted-foreground">Connect your wallet to manage your agent.</p>
       ) : !(sessionAddr && sessionAddr.toLowerCase() === (owner ?? '')) ? (
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <p className="text-muted-foreground">
-              You’re connected as <span className="font-mono">{owner}</span>. Please sign in to create a session.
-            </p>
-            <Button onClick={handleSignIn} disabled={authBusy}>
-              {authBusy ? 'Signing…' : 'Sign in with wallet'}
-            </Button>
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
-          </CardContent>
-        </Card>
+        <Card><CardContent className="p-6 space-y-4">
+          <p className="text-muted-foreground">
+            You’re connected as <span className="font-mono">{owner}</span>. Please sign in to create a session.
+          </p>
+          <Button onClick={handleSignIn} disabled={authBusy}>
+            {authBusy ? 'Signing…' : 'Sign in with wallet'}
+          </Button>
+          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        </CardContent></Card>
       ) : (
         <>
           {/* ========================= HL Agent card ========================= */}
@@ -490,7 +497,6 @@ export default function ProfilePage() {
                 <Image src="/hyprliquid.png" alt="Hyperliquid" width={32} height={32} />
               </div>
 
-              {/* ===== Agent view (if exists) ===== */}
               {loadingAgent ? (
                 <div className="text-sm text-muted-foreground">Loading agent…</div>
               ) : agent ? (
@@ -518,30 +524,14 @@ export default function ProfilePage() {
                   </div>
                 </div>
               ) : (
-                /* ===== No agent -> approval form ===== */
                 <div className="mt-2 space-y-4">
                   <h2 className="font-medium text-lg">Create / Approve Agent</h2>
-
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <FieldLabel>Agent Private Key (0x…)</FieldLabel>
-                      <TextInput value={agentPriv} onChange={(e) => setAgentPriv(e.target.value)} />
-                      <div className="text-xs text-muted-foreground">
-                        Generated locally. Stored encrypted by backend after approval. Keep it private.
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <FieldLabel>Agent Address</FieldLabel>
-                      <TextInput value={agentAddr} onChange={(e) => setAgentAddr(e.target.value)} />
-                    </div>
+                  <div className="text-xs text-muted-foreground">
+                    Generates a key locally and approves it on Hyperliquid. The key is stored encrypted by the backend.
                   </div>
-
                   <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={handleGenerateKey}>
-                      Generate Agent Key
-                    </Button>
-                    <Button type="button" onClick={approveAgent} disabled={busy}>
-                      {busy ? 'Working…' : 'Approve Agent'}
+                    <Button type="button" onClick={createAndApproveAgent} disabled={busy}>
+                      {busy ? 'Working…' : 'Create Agent'}
                     </Button>
                   </div>
                 </div>
@@ -556,66 +546,67 @@ export default function ProfilePage() {
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground">Extended API Key</div>
+                  <div className="text-sm text-muted-foreground">Extended (x10)</div>
                   <div className="text-xs text-muted-foreground">
-                    Mainnet enforced server-side. Key will be visible in Extended UI (description helps identify).
+                    Onboard (0) → subaccount (1) → API key (1).
                   </div>
                 </div>
                 <Image src="/extended.png" alt="Extended" width={32} height={32} />
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <FieldLabel>Account Index</FieldLabel>
-                  <TextInput
-                    type="number"
-                    min={0}
-                    value={extAccountIndex}
-                    onChange={(e) => setExtAccountIndex(Number(e.target.value || 0))}
-                  />
-                  <div className="text-xs text-muted-foreground">
-                    Use 0 for default; other subaccounts via 1, 2, …
+              {apiKeyReady ? (
+                <div className="border rounded-xl p-4 space-y-3">
+                  <div className="text-sm">
+                    Status: <span className="text-green-600 font-medium">OK</span>
                   </div>
+                  <div className="text-xs text-muted-foreground">
+                    client_id: <span className="font-mono">{extKeyInfo?.client_id ?? '—'}</span>
+                    {extKeyInfo?.vault_number != null ? (
+                      <> · vault: <span className="font-mono">{extKeyInfo.vault_number}</span></>
+                    ) : null}
+                    {extKeyInfo?.stark_key_public ? (
+                      <> · l2 pub: <span className="font-mono">{String(extKeyInfo.stark_key_public).slice(0, 10)}…</span></>
+                    ) : null}
+                  </div>
+                  <Button asChild>
+                    <Link href="/app/markets">Start farming</Link>
+                  </Button>
                 </div>
-                <div className="space-y-2">
-                  <FieldLabel>Description</FieldLabel>
-                  <TextInput
-                    value={extDescription}
-                    onChange={(e) => setExtDescription(e.target.value)}
-                    placeholder="aeq-prod trading key"
-                  />
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" onClick={setupExtendedIndex1} disabled={extBusy}>
+                      {extBusy ? 'Working…' : 'Setup Extended (index 1)'}
+                    </Button>
+                  </div>
 
-              <div className="flex gap-2">
-                <Button type="button" onClick={extendedCheckOrCreate} disabled={extBusy}>
-                  {extBusy ? 'Working…' : 'Check / Create API Key'}
-                </Button>
-              </div>
+                  {extStatus ? <div className="text-xs text-muted-foreground">{extStatus}</div> : null}
 
-              {extResult ? (
-                <div className="mt-2 border rounded-xl p-4">
-                  {'exists' in extResult && extResult.exists ? (
-                    <div>
-                      <div className="text-sm">An API key already exists for this account.</div>
-                      <div className="text-xs text-muted-foreground">
-                        account_id: <span className="font-mono">{extResult.account_id}</span>
-                      </div>
+                  {extResult ? (
+                    <div className="mt-2 border rounded-xl p-4">
+                      {'exists' in extResult && extResult.exists ? (
+                        <div>
+                          <div className="text-sm">An API key already exists.</div>
+                          <div className="text-xs text-muted-foreground">
+                            client_id: <span className="font-mono">{extResult.client_id}</span>
+                          </div>
+                        </div>
+                      ) : 'created' in extResult && extResult.created ? (
+                        <div>
+                          <div className="text-sm">API key created successfully.</div>
+                          <div className="text-xs text-muted-foreground">
+                            client_id: <span className="font-mono">{extResult.client_id}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm">Done.</div>
+                      )}
                     </div>
-                  ) : 'created' in extResult && extResult.created ? (
-                    <div>
-                      <div className="text-sm">API key created successfully.</div>
-                      <div className="text-xs text-muted-foreground">
-                        account_id: <span className="font-mono">{extResult.account_id}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-sm">Done.</div>
-                  )}
-                </div>
-              ) : null}
+                  ) : null}
 
-              {extError ? <p className="text-sm text-red-600">{extError}</p> : null}
+                  {extError ? <p className="text-sm text-red-600">{extError}</p> : null}
+                </>
+              )}
             </CardContent>
           </Card>
         </>
