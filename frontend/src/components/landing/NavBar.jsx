@@ -18,7 +18,7 @@ export function NavBar() {
             </a>
             <a
               className="transition-colors hover:text-foreground/80 text-foreground/60"
-              href="/legal/terms"
+              href="/legal"
             >
               Legal
             </a>
