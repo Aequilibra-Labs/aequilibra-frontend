@@ -1,15 +1,17 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
+import {
   Clock,
-  TrendingUp, 
+  TrendingUp,
   TrendingDown,
+  Info,
+  ArrowUpDown,
   ExternalLink,
-  ArrowUpDown
 } from 'lucide-react';
 import { useHyperliquidMarkets } from '@/lib/hyperliquidAPI';
 import { useExtendedMarkets } from '@/lib/extendedAPI';
@@ -17,32 +19,63 @@ import { useExtendedMarkets } from '@/lib/extendedAPI';
 export function ComparisonPairsTable({ searchQuery = '' }) {
   const [sortBy, setSortBy] = useState('volume24hDiff');
   const [sortOrder, setSortOrder] = useState('desc');
-  
+  const router = useRouter();
+
+  // Handler to navigate to asset page
+  const handleViewAsset = (assetName) => {
+    router.push(`/markets/asset/${assetName.toLowerCase()}`);
+  };
+
   // Get data from both exchanges
-  const { data: hlData, loading: hlLoading, lastUpdate: hlUpdate } = useHyperliquidMarkets();
-  const { data: exData, loading: exLoading, lastUpdate: exUpdate } = useExtendedMarkets();
+  const {
+    data: hlData,
+    loading: hlLoading,
+    lastUpdate: hlUpdate,
+  } = useHyperliquidMarkets();
+  const {
+    data: exData,
+    loading: exLoading,
+    lastUpdate: exUpdate,
+  } = useExtendedMarkets();
 
   // Combine and compare data
   const comparisonData = useMemo(() => {
-    if (!hlData || !exData || hlData.length === 0 || exData.length === 0) return [];
+    if (!hlData || !exData || hlData.length === 0 || exData.length === 0)
+      return [];
 
     const combined = [];
-    
+
     // Find common pairs between both exchanges
-    hlData.forEach(hlPair => {
+    hlData.forEach((hlPair) => {
       if (!hlPair?.coin) return; // Skip if hlPair.coin is undefined
-      
-      const exPair = exData.find(ex => 
-        ex?.base && hlPair?.coin && 
-        ex.base.toLowerCase() === hlPair.coin.toLowerCase()
+
+      const exPair = exData.find(
+        (ex) =>
+          ex?.base &&
+          hlPair?.coin &&
+          ex.base.toLowerCase() === hlPair.coin.toLowerCase()
       );
-      
+
       if (exPair && exPair.price !== undefined && hlPair.markPx !== undefined) {
-        const priceDiff = (hlPair.markPx || 0) > 0 ? (((exPair.price || 0) - (hlPair.markPx || 0)) / (hlPair.markPx || 1)) * 100 : 0;
-        const volume24hDiff = (hlPair.volume24h || 0) > 0 ? (((exPair.volume24h || 0) - (hlPair.volume24h || 0)) / (hlPair.volume24h || 1)) * 100 : 0;
-        const fundingDiff = (exPair.fundingRate !== null && exPair.fundingRate !== undefined) && (hlPair.funding !== null && hlPair.funding !== undefined)
-          ? ((exPair.fundingRate || 0) - (hlPair.funding || 0)) * 100 // Convert to basis points for better comparison
-          : 0;
+        const priceDiff =
+          (hlPair.markPx || 0) > 0
+            ? (((exPair.price || 0) - (hlPair.markPx || 0)) /
+                (hlPair.markPx || 1)) *
+              100
+            : 0;
+        const volume24hDiff =
+          (hlPair.volume24h || 0) > 0
+            ? (((exPair.volume24h || 0) - (hlPair.volume24h || 0)) /
+                (hlPair.volume24h || 1)) *
+              100
+            : 0;
+        const fundingDiff =
+          exPair.fundingRate !== null &&
+          exPair.fundingRate !== undefined &&
+          hlPair.funding !== null &&
+          hlPair.funding !== undefined
+            ? ((exPair.fundingRate || 0) - (hlPair.funding || 0)) * 100 // Convert to basis points for better comparison
+            : 0;
 
         combined.push({
           base: hlPair.coin,
@@ -51,9 +84,14 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
           hl: {
             price: hlPair.markPx || 0,
             volume24h: hlPair.volume24h || 0,
-            change24h: parseFloat(hlPair.prevDayPx) > 0 ? (((hlPair.markPx || 0) - parseFloat(hlPair.prevDayPx)) / parseFloat(hlPair.prevDayPx)) * 100 : 0,
+            change24h:
+              parseFloat(hlPair.prevDayPx) > 0
+                ? (((hlPair.markPx || 0) - parseFloat(hlPair.prevDayPx)) /
+                    parseFloat(hlPair.prevDayPx)) *
+                  100
+                : 0,
             fundingRate: hlPair.funding || 0,
-            maxLeverage: hlPair.maxLeverage || 20
+            maxLeverage: hlPair.maxLeverage || 20,
           },
           // Extended data
           ex: {
@@ -61,14 +99,14 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
             volume24h: exPair.volume24h || 0,
             change24h: exPair.change24h || 0,
             fundingRate: exPair.fundingRate || 0,
-            maxLeverage: exPair.maxLeverage || 10
+            maxLeverage: exPair.maxLeverage || 10,
           },
           // Comparison metrics
           priceDiff,
           volume24hDiff,
           fundingDiff,
           // For sorting
-          avgVolume: ((hlPair.volume24h || 0) + (exPair.volume24h || 0)) / 2
+          avgVolume: ((hlPair.volume24h || 0) + (exPair.volume24h || 0)) / 2,
         });
       }
     });
@@ -80,20 +118,22 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
   const filteredData = useMemo(() => {
     if (!comparisonData) return [];
 
-    let filtered = comparisonData.filter(pair => {
+    let filtered = comparisonData.filter((pair) => {
       const searchLower = searchQuery.toLowerCase();
       const baseLower = pair.base.toLowerCase();
       const displayPair = `${pair.base}/usd`.toLowerCase();
-      
-      return baseLower.includes(searchLower) ||
-             displayPair.includes(searchLower) ||
-             `${pair.base}usd`.toLowerCase().includes(searchLower);
+
+      return (
+        baseLower.includes(searchLower) ||
+        displayPair.includes(searchLower) ||
+        `${pair.base}usd`.toLowerCase().includes(searchLower)
+      );
     });
 
     // Sort data
     filtered.sort((a, b) => {
       let aVal, bVal;
-      
+
       switch (sortBy) {
         case 'symbol':
           aVal = a.base.toLowerCase();
@@ -119,12 +159,12 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
           aVal = a[sortBy];
           bVal = b[sortBy];
       }
-      
+
       if (typeof aVal === 'string') {
         aVal = aVal.toLowerCase();
         bVal = bVal.toLowerCase();
       }
-      
+
       if (sortOrder === 'asc') {
         return aVal > bVal ? 1 : -1;
       } else {
@@ -172,7 +212,9 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-semibold">Exchange Comparison</h2>
-            <Badge variant="outline" className="px-3 py-1">{filteredData.length} common pairs</Badge>
+            <Badge variant="outline" className="px-3 py-1">
+              {filteredData.length} common pairs
+            </Badge>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1">
                 <div className="w-2 h-2 rounded-full bg-blue-500" />
@@ -200,25 +242,27 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
           <table className="w-full">
             <thead>
               <tr className="border-b bg-muted/30">
-                <th className="text-left p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort('symbol')}>
+                <th
+                  className="text-left p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('symbol')}
+                >
                   Asset
                 </th>
-                <th className="text-center p-4 font-semibold">
-                  Prices
-                </th>
-                <th className="text-center p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort('priceDiff')}>
+                <th className="text-center p-4 font-semibold">Prices</th>
+                <th
+                  className="text-center p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('priceDiff')}
+                >
                   <div className="flex items-center justify-center gap-1">
                     Price Diff
                     <ArrowUpDown className="h-3 w-3" />
                   </div>
                 </th>
-                <th className="text-center p-4 font-semibold">
-                  Volume (24h)
-                </th>
-                <th className="text-center p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort('fundingDiff')}>
+                <th className="text-center p-4 font-semibold">Volume (24h)</th>
+                <th
+                  className="text-center p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('fundingDiff')}
+                >
                   <div className="flex items-center justify-center gap-1">
                     Funding Rates
                     <ArrowUpDown className="h-3 w-3" />
@@ -231,15 +275,17 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
               {filteredData.map((pair) => {
                 const priceDiffAbs = Math.abs(pair.priceDiff || 0);
                 const fundingDiffAbs = Math.abs(pair.fundingDiff || 0);
-                
+
                 return (
-                  <tr 
+                  <tr
                     key={pair.symbol}
                     className="hover:bg-muted/30 transition-all duration-200 group"
                   >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="font-semibold text-lg">{pair.base}/USD</div>
+                        <div className="font-semibold text-lg">
+                          {pair.base}/USD
+                        </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs px-2">
                             {pair.hl.maxLeverage}x HL
@@ -250,39 +296,44 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
                         </div>
                       </div>
                     </td>
-                    
+
                     <td className="p-4">
                       <div className="space-y-1 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-blue-500" />
                           <span className="font-mono text-sm">
-                            ${(pair.hl.price || 0).toLocaleString('en-US', { 
-                              minimumFractionDigits: 2, 
-                              maximumFractionDigits: 6 
+                            $
+                            {(pair.hl.price || 0).toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 6,
                             })}
                           </span>
                         </div>
                         <div className="flex items-center justify-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-purple-500" />
                           <span className="font-mono text-sm">
-                            ${(pair.ex.price || 0).toLocaleString('en-US', { 
-                              minimumFractionDigits: 2, 
-                              maximumFractionDigits: 6 
+                            $
+                            {(pair.ex.price || 0).toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 6,
                             })}
                           </span>
                         </div>
                       </div>
                     </td>
-                    
+
                     <td className="p-4 text-center">
-                      <div className={`font-semibold text-base ${
-                        priceDiffAbs > 1 
-                          ? 'text-red-600' 
-                          : priceDiffAbs > 0.5 
-                            ? 'text-yellow-600' 
+                      <div
+                        className={`font-semibold text-base ${
+                          priceDiffAbs > 1
+                            ? 'text-red-600'
+                            : priceDiffAbs > 0.5
+                            ? 'text-yellow-600'
                             : 'text-green-600'
-                      }`}>
-                        {pair.priceDiff > 0 ? '+' : ''}{(pair.priceDiff || 0).toFixed(2)}%
+                        }`}
+                      >
+                        {pair.priceDiff > 0 ? '+' : ''}
+                        {(pair.priceDiff || 0).toFixed(2)}%
                       </div>
                       {priceDiffAbs > 1 && (
                         <Badge variant="destructive" className="text-xs mt-1">
@@ -290,7 +341,7 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
                         </Badge>
                       )}
                     </td>
-                    
+
                     <td className="p-4">
                       <div className="space-y-1 text-center">
                         <div className="flex items-center justify-center gap-2">
@@ -307,58 +358,96 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
                         </div>
                       </div>
                     </td>
-                    
+
                     <td className="p-4">
                       <div className="space-y-1 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-blue-500" />
-                          <span className={`font-mono text-sm ${
-                            pair.hl.fundingRate > 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {pair.hl.fundingRate !== null 
-                              ? `${pair.hl.fundingRate > 0 ? '+' : ''}${(pair.hl.fundingRate || 0).toFixed(3)}%`
-                              : 'N/A'
-                            }
+                          <span
+                            className={`font-mono text-sm ${
+                              pair.hl.fundingRate > 0
+                                ? 'text-green-600'
+                                : 'text-red-600'
+                            }`}
+                          >
+                            {pair.hl.fundingRate !== null
+                              ? `${pair.hl.fundingRate > 0 ? '+' : ''}${(
+                                  pair.hl.fundingRate || 0
+                                ).toFixed(3)}%`
+                              : 'N/A'}
                           </span>
                         </div>
                         <div className="flex items-center justify-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-purple-500" />
-                          <span className={`font-mono text-sm ${
-                            pair.ex.fundingRate > 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {pair.ex.fundingRate !== null 
-                              ? `${pair.ex.fundingRate > 0 ? '+' : ''}${(pair.ex.fundingRate || 0).toFixed(3)}%`
-                              : 'N/A'
-                            }
+                          <span
+                            className={`font-mono text-sm ${
+                              pair.ex.fundingRate > 0
+                                ? 'text-green-600'
+                                : 'text-red-600'
+                            }`}
+                          >
+                            {pair.ex.fundingRate !== null
+                              ? `${pair.ex.fundingRate > 0 ? '+' : ''}${(
+                                  pair.ex.fundingRate || 0
+                                ).toFixed(3)}%`
+                              : 'N/A'}
                           </span>
                         </div>
                         {pair.fundingDiff !== null && fundingDiffAbs > 5 && (
-                          <Badge variant={fundingDiffAbs > 10 ? "destructive" : "secondary"} className="text-xs mt-1">
+                          <Badge
+                            variant={
+                              fundingDiffAbs > 10 ? 'destructive' : 'secondary'
+                            }
+                            className="text-xs mt-1"
+                          >
                             {(fundingDiffAbs || 0).toFixed(1)}bp diff
                           </Badge>
                         )}
                       </div>
                     </td>
-                    
+
                     <td className="p-4">
                       <div className="flex flex-col items-center gap-2">
+                        {/* Asset Details Button */}
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="text-xs px-3"
+                          onClick={() => handleViewAsset(pair.base)}
+                        >
+                          View {pair.base}
+                        </Button>
+                        
+                        {/* Exchange Trading Buttons */}
                         <div className="flex items-center gap-2">
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="outline"
                             className="text-xs px-3"
-                            onClick={() => window.open(`https://app.hyperliquid.xyz/trade/${pair.base}`, '_blank')}
+                            onClick={() =>
+                              window.open(
+                                `https://app.hyperliquid.xyz/trade/${pair.base}`,
+                                '_blank'
+                              )
+                            }
                           >
                             <div className="w-2 h-2 rounded-full bg-blue-500 mr-1" />
+                            <ExternalLink className="h-3 w-3 mr-1" />
                             HL
                           </Button>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="outline"
                             className="text-xs px-3"
-                            onClick={() => window.open(`https://app.extended.exchange/trade/${pair.base}`, '_blank')}
+                            onClick={() =>
+                              window.open(
+                                `https://app.extended.exchange/trade/${pair.base}`,
+                                '_blank'
+                              )
+                            }
                           >
                             <div className="w-2 h-2 rounded-full bg-purple-500 mr-1" />
+                            <ExternalLink className="h-3 w-3 mr-1" />
                             EX
                           </Button>
                         </div>
@@ -380,10 +469,22 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
           <div className="text-sm space-y-2">
             <div className="font-medium">Comparison Legend:</div>
             <div className="grid md:grid-cols-2 gap-2 text-muted-foreground">
-              <div>• <span className="text-red-600 font-medium">Red Diff</span>: Significant price/funding difference</div>
-              <div>• <span className="text-yellow-600 font-medium">Yellow Diff</span>: Moderate difference</div>
-              <div>• <span className="text-green-600 font-medium">Green Diff</span>: Minimal difference</div>
-              <div>• <strong>bp</strong>: Basis points (1bp = 0.01%)</div>
+              <div>
+                • <span className="text-red-600 font-medium">Red Diff</span>:
+                Significant price/funding difference
+              </div>
+              <div>
+                •{' '}
+                <span className="text-yellow-600 font-medium">Yellow Diff</span>
+                : Moderate difference
+              </div>
+              <div>
+                • <span className="text-green-600 font-medium">Green Diff</span>
+                : Minimal difference
+              </div>
+              <div>
+                • <strong>bp</strong>: Basis points (1bp = 0.01%)
+              </div>
             </div>
           </div>
         </div>

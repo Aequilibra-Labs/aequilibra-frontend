@@ -3,47 +3,49 @@
 import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Clock,
-  TrendingUp, 
-  TrendingDown,
-  Info
-} from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, Info } from 'lucide-react';
 import { useExtendedFunding } from '@/lib/extendedAPI';
 
 export function ExtendedFundingTable({ searchQuery = '' }) {
   const [sortBy, setSortBy] = useState('fundingRate');
   const [sortOrder, setSortOrder] = useState('desc');
-  
+
   // Get real Extended Exchange funding data with real-time updates
-  const { data: fundingData, loading, error, lastUpdate } = useExtendedFunding();
+  const {
+    data: fundingData,
+    loading,
+    error,
+    lastUpdate,
+  } = useExtendedFunding();
 
   // Filter and sort data
   const filteredData = useMemo(() => {
     if (!fundingData) return [];
 
-    let filtered = fundingData.filter(item => {
+    let filtered = fundingData.filter((item) => {
       const searchLower = searchQuery.toLowerCase();
       const baseLower = (item.base || '').toLowerCase();
       const symbolLower = (item.symbol || '').toLowerCase();
       const displayPair = `${item.base || 'unknown'}/usd`.toLowerCase();
-      
-      return baseLower.includes(searchLower) ||
-             symbolLower.includes(searchLower) ||
-             displayPair.includes(searchLower) ||
-             `${item.base || 'unknown'}usd`.toLowerCase().includes(searchLower);
+
+      return (
+        baseLower.includes(searchLower) ||
+        symbolLower.includes(searchLower) ||
+        displayPair.includes(searchLower) ||
+        `${item.base || 'unknown'}usd`.toLowerCase().includes(searchLower)
+      );
     });
 
     // Sort data
     filtered.sort((a, b) => {
       let aVal = a[sortBy];
       let bVal = b[sortBy];
-      
+
       if (typeof aVal === 'string') {
         aVal = aVal.toLowerCase();
         bVal = bVal.toLowerCase();
       }
-      
+
       if (sortOrder === 'asc') {
         return aVal > bVal ? 1 : -1;
       } else {
@@ -70,15 +72,15 @@ export function ExtendedFundingTable({ searchQuery = '' }) {
     const nextFundingHour = Math.ceil((hours + 1) / 8) * 8; // Next 8-hour interval
     const nextFunding = new Date(now);
     nextFunding.setUTCHours(nextFundingHour, 0, 0, 0);
-    
+
     if (nextFunding <= now) {
       nextFunding.setUTCDate(nextFunding.getUTCDate() + 1);
     }
-    
+
     const timeDiff = nextFunding - now;
     const hoursLeft = Math.floor(timeDiff / (1000 * 60 * 60));
     const minutesLeft = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     return `${hoursLeft}h ${minutesLeft}m`;
   };
 
@@ -119,8 +121,12 @@ export function ExtendedFundingTable({ searchQuery = '' }) {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-semibold">Funding Rates</h2>
-            <Badge variant="outline" className="px-3 py-1">{filteredData.length} markets</Badge>
-            <Badge variant="secondary" className="px-3 py-1">Extended</Badge>
+            <Badge variant="outline" className="px-3 py-1">
+              {filteredData.length} markets
+            </Badge>
+            <Badge variant="secondary" className="px-3 py-1">
+              Extended
+            </Badge>
             {lastUpdate && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
@@ -131,7 +137,7 @@ export function ExtendedFundingTable({ searchQuery = '' }) {
               </div>
             )}
           </div>
-          
+
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Info className="h-4 w-4" />
             <span>Next funding: {getNextFundingTime()}</span>
@@ -142,28 +148,40 @@ export function ExtendedFundingTable({ searchQuery = '' }) {
           <table className="w-full">
             <thead>
               <tr className="border-b bg-muted/30">
-                <th className="text-left p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort('symbol')}>
+                <th
+                  className="text-left p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('symbol')}
+                >
                   Asset
                 </th>
-                <th className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort('fundingRate')}>
+                <th
+                  className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('fundingRate')}
+                >
                   Current Rate
                 </th>
-                <th className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort('predictedFundingRate')}>
+                <th
+                  className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('predictedFundingRate')}
+                >
                   Predicted Rate
                 </th>
-                <th className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort('dailyFundingRate')}>
+                <th
+                  className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('dailyFundingRate')}
+                >
                   Daily APR
                 </th>
-                <th className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort('openInterest')}>
+                <th
+                  className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('openInterest')}
+                >
                   Open Interest
                 </th>
-                <th className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort('price')}>
+                <th
+                  className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('price')}
+                >
                   Mark Price
                 </th>
               </tr>
@@ -171,20 +189,25 @@ export function ExtendedFundingTable({ searchQuery = '' }) {
             <tbody>
               {filteredData.map((item) => {
                 const isPositiveRate = (item.fundingRate || 0) > 0;
-                const isPositivePredicted = (item.predictedFundingRate || 0) > 0;
+                const isPositivePredicted =
+                  (item.predictedFundingRate || 0) > 0;
                 const isPositiveDaily = (item.dailyFundingRate || 0) > 0;
-                
+
                 return (
-                  <tr 
+                  <tr
                     key={item.symbol}
                     className="hover:bg-muted/30 transition-all duration-200 group"
                   >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="font-semibold text-lg">{item.base}/USD</div>
+                        <div className="font-semibold text-lg">
+                          {item.base}/USD
+                        </div>
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-purple-500" />
-                          <span className="text-xs font-medium text-muted-foreground">EX</span>
+                          <span className="text-xs font-medium text-muted-foreground">
+                            EX
+                          </span>
                         </div>
                         {item.maxLeverage > 1 && (
                           <Badge variant="outline" className="text-xs px-2">
@@ -193,46 +216,58 @@ export function ExtendedFundingTable({ searchQuery = '' }) {
                         )}
                       </div>
                     </td>
-                    
+
                     <td className="p-4 text-right">
-                      <div className={`flex items-center justify-end gap-2 font-semibold text-lg ${
-                        isPositiveRate ? 'text-green-600' : 'text-red-600'
-                      }`}>
+                      <div
+                        className={`flex items-center justify-end gap-2 font-semibold text-lg ${
+                          isPositiveRate ? 'text-green-600' : 'text-red-600'
+                        }`}
+                      >
                         {isPositiveRate ? (
                           <TrendingUp className="h-4 w-4" />
                         ) : (
                           <TrendingDown className="h-4 w-4" />
                         )}
                         <span>
-                          {isPositiveRate ? '+' : ''}{(item.fundingRate || 0).toFixed(4)}%
+                          {isPositiveRate ? '+' : ''}
+                          {(item.fundingRate || 0).toFixed(4)}%
                         </span>
                       </div>
                     </td>
-                    
+
                     <td className="p-4 text-right">
-                      <span className={`font-semibold text-base ${
-                        isPositivePredicted ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {isPositivePredicted ? '+' : ''}{(item.predictedFundingRate || 0).toFixed(4)}%
+                      <span
+                        className={`font-semibold text-base ${
+                          isPositivePredicted
+                            ? 'text-green-600'
+                            : 'text-red-600'
+                        }`}
+                      >
+                        {isPositivePredicted ? '+' : ''}
+                        {(item.predictedFundingRate || 0).toFixed(4)}%
                       </span>
                     </td>
-                    
+
                     <td className="p-4 text-right">
-                      <span className={`font-semibold text-base ${
-                        isPositiveDaily ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {isPositiveDaily ? '+' : ''}{(item.dailyFundingRate || 0).toFixed(2)}%
+                      <span
+                        className={`font-semibold text-base ${
+                          isPositiveDaily ? 'text-green-600' : 'text-red-600'
+                        }`}
+                      >
+                        {isPositiveDaily ? '+' : ''}
+                        {(item.dailyFundingRate || 0).toFixed(2)}%
                       </span>
                     </td>
-                    
+
                     <td className="p-4 text-right font-mono font-medium text-base">
                       ${((item.openInterest || 0) / 1000000).toFixed(1)}M
                     </td>
-                    
+
                     <td className="p-4 text-right font-mono font-medium text-base">
-                      ${(item.price || 0).toLocaleString('en-US', { 
-                        minimumFractionDigits: 2, 
-                        maximumFractionDigits: 6 
+                      $
+                      {(item.price || 0).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 6,
                       })}
                     </td>
                   </tr>
@@ -248,13 +283,16 @@ export function ExtendedFundingTable({ searchQuery = '' }) {
             <div className="text-sm space-y-1">
               <p className="font-medium">Funding Rate Information</p>
               <p className="text-muted-foreground">
-                • Positive rates indicate longs pay shorts • Negative rates indicate shorts pay longs
+                • Positive rates indicate longs pay shorts • Negative rates
+                indicate shorts pay longs
               </p>
               <p className="text-muted-foreground">
-                • Funding is exchanged every 8 hours at 00:00, 08:00, and 16:00 UTC
+                • Funding is exchanged every 8 hours at 00:00, 08:00, and 16:00
+                UTC
               </p>
               <p className="text-muted-foreground">
-                • Daily APR represents the annualized rate based on current funding
+                • Daily APR represents the annualized rate based on current
+                funding
               </p>
             </div>
           </div>

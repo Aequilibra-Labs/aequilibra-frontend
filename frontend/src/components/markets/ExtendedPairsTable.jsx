@@ -4,12 +4,7 @@ import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  TrendingUp, 
-  TrendingDown,
-  ExternalLink,
-  Clock
-} from 'lucide-react';
+import { TrendingUp, TrendingDown, ExternalLink, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useExtendedMarkets } from '@/lib/extendedAPI';
 
@@ -17,7 +12,7 @@ export function ExtendedPairsTable({ searchQuery = '' }) {
   const router = useRouter();
   const [sortBy, setSortBy] = useState('volume24h');
   const [sortOrder, setSortOrder] = useState('desc');
-  
+
   // Get real Extended Exchange market data with real-time updates
   const { data: marketData, loading, error, lastUpdate } = useExtendedMarkets();
 
@@ -25,28 +20,30 @@ export function ExtendedPairsTable({ searchQuery = '' }) {
   const filteredData = useMemo(() => {
     if (!marketData) return [];
 
-    let filtered = marketData.filter(pair => {
+    let filtered = marketData.filter((pair) => {
       const searchLower = searchQuery.toLowerCase();
       const baseLower = pair.base.toLowerCase();
       const symbolLower = pair.symbol.toLowerCase();
       const displayPair = `${pair.base}/usd`.toLowerCase(); // Match displayed format
-      
-      return baseLower.includes(searchLower) ||
-             symbolLower.includes(searchLower) ||
-             displayPair.includes(searchLower) ||
-             `${pair.base}usd`.toLowerCase().includes(searchLower); // Also match without slash
+
+      return (
+        baseLower.includes(searchLower) ||
+        symbolLower.includes(searchLower) ||
+        displayPair.includes(searchLower) ||
+        `${pair.base}usd`.toLowerCase().includes(searchLower)
+      ); // Also match without slash
     });
 
     // Sort data
     filtered.sort((a, b) => {
       let aVal = a[sortBy];
       let bVal = b[sortBy];
-      
+
       if (typeof aVal === 'string') {
         aVal = aVal.toLowerCase();
         bVal = bVal.toLowerCase();
       }
-      
+
       if (sortOrder === 'asc') {
         return aVal > bVal ? 1 : -1;
       } else {
@@ -107,8 +104,12 @@ export function ExtendedPairsTable({ searchQuery = '' }) {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-semibold">Trading Pairs</h2>
-            <Badge variant="outline" className="px-3 py-1">{filteredData.length} pairs</Badge>
-            <Badge variant="secondary" className="px-3 py-1">Extended</Badge>
+            <Badge variant="outline" className="px-3 py-1">
+              {filteredData.length} pairs
+            </Badge>
+            <Badge variant="secondary" className="px-3 py-1">
+              Extended
+            </Badge>
             {lastUpdate && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
@@ -125,24 +126,34 @@ export function ExtendedPairsTable({ searchQuery = '' }) {
           <table className="w-full">
             <thead>
               <tr className="border-b bg-muted/30">
-                <th className="text-left p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort('symbol')}>
+                <th
+                  className="text-left p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('symbol')}
+                >
                   Asset
                 </th>
-                <th className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort('price')}>
+                <th
+                  className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('price')}
+                >
                   Price
                 </th>
-                <th className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort('change24h')}>
+                <th
+                  className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('change24h')}
+                >
                   24h Change
                 </th>
-                <th className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort('volume24h')}>
+                <th
+                  className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('volume24h')}
+                >
                   Volume (24h)
                 </th>
-                <th className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort('fundingRate')}>
+                <th
+                  className="text-right p-4 font-semibold cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('fundingRate')}
+                >
                   Funding Rate
                 </th>
                 <th className="text-center p-4 font-semibold">Action</th>
@@ -152,19 +163,23 @@ export function ExtendedPairsTable({ searchQuery = '' }) {
               {filteredData.map((pair) => {
                 const isPositiveChange = pair.change24h >= 0;
                 const isPositiveFunding = pair.fundingRate > 0;
-                
+
                 return (
-                  <tr 
+                  <tr
                     key={pair.symbol}
                     className="hover:bg-muted/30 cursor-pointer transition-all duration-200 group"
                     onClick={() => handleRowClick(pair)}
                   >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="font-semibold text-lg">{pair.base}/USD</div>
+                        <div className="font-semibold text-lg">
+                          {pair.base}/USD
+                        </div>
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-purple-500" />
-                          <span className="text-xs font-medium text-muted-foreground">EX</span>
+                          <span className="text-xs font-medium text-muted-foreground">
+                            EX
+                          </span>
                         </div>
                         {pair.maxLeverage > 1 && (
                           <Badge variant="outline" className="text-xs px-2">
@@ -172,51 +187,62 @@ export function ExtendedPairsTable({ searchQuery = '' }) {
                           </Badge>
                         )}
                       </div>
-                    </td>                                      
+                    </td>
                     <td className="p-4 text-right font-mono text-lg font-semibold">
                       <span className="transition-all duration-300 hover:scale-105">
-                        ${pair.price.toLocaleString('en-US', { 
-                          minimumFractionDigits: 2, 
-                          maximumFractionDigits: 6 
+                        $
+                        {pair.price.toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 6,
                         })}
                       </span>
                     </td>
-                    
+
                     <td className="p-4 text-right">
-                      <div className={`flex items-center justify-end gap-2 ${
-                        isPositiveChange ? 'text-green-600' : 'text-red-600'
-                      }`}>
+                      <div
+                        className={`flex items-center justify-end gap-2 ${
+                          isPositiveChange ? 'text-green-600' : 'text-red-600'
+                        }`}
+                      >
                         {isPositiveChange ? (
                           <TrendingUp className="h-4 w-4" />
                         ) : (
                           <TrendingDown className="h-4 w-4" />
                         )}
                         <span className="font-semibold text-base">
-                          {isPositiveChange ? '+' : ''}{pair.change24h.toFixed(2)}%
+                          {isPositiveChange ? '+' : ''}
+                          {pair.change24h.toFixed(2)}%
                         </span>
                       </div>
                     </td>
-                    
+
                     <td className="p-4 text-right font-mono font-medium text-base">
                       ${(pair.volume24h / 1000000).toFixed(1)}M
                     </td>
-                    
+
                     <td className="p-4 text-right">
                       {pair.fundingRate !== null ? (
-                        <span className={`font-semibold text-base ${
-                          isPositiveFunding ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {isPositiveFunding ? '+' : ''}{pair.fundingRate.toFixed(3)}%
+                        <span
+                          className={`font-semibold text-base ${
+                            isPositiveFunding
+                              ? 'text-green-600'
+                              : 'text-red-600'
+                          }`}
+                        >
+                          {isPositiveFunding ? '+' : ''}
+                          {pair.fundingRate.toFixed(3)}%
                         </span>
                       ) : (
-                        <span className="text-muted-foreground font-medium">N/A</span>
+                        <span className="text-muted-foreground font-medium">
+                          N/A
+                        </span>
                       )}
                     </td>
-                    
+
                     <td className="p-4">
                       <div className="flex items-center justify-center gap-3">
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           className="px-6 group-hover:scale-105 transition-transform"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -225,13 +251,16 @@ export function ExtendedPairsTable({ searchQuery = '' }) {
                         >
                           Trade
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           className="group-hover:scale-105 transition-transform"
                           onClick={(e) => {
                             e.stopPropagation();
-                            window.open(`https://app.extended.exchange/trade/${pair.base}`, '_blank');
+                            window.open(
+                              `https://app.extended.exchange/trade/${pair.base}`,
+                              '_blank'
+                            );
                           }}
                         >
                           <ExternalLink className="h-4 w-4" />
