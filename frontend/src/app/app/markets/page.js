@@ -31,7 +31,8 @@ export default function MarketsPage() {
       ) : (
         <ExtendedFundingTable searchQuery={searchQuery} />
       );
-    } else { // compare
+    } else {
+      // compare
       return activeTab === 'pairs' ? (
         <ComparisonPairsTable searchQuery={searchQuery} />
       ) : (
@@ -43,15 +44,33 @@ export default function MarketsPage() {
   const getExchangeBadges = () => {
     switch (activeExchange) {
       case 'hyperliquid':
-        return <Badge variant="secondary" className="px-3 py-1">Hyperliquid</Badge>;
+        return (
+          <Badge variant="secondary" className="px-3 py-1">
+            Hyperliquid
+          </Badge>
+        );
       case 'extended':
-        return <Badge variant="secondary" className="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">Extended Exchange</Badge>;
+        return (
+          <Badge
+            variant="secondary"
+            className="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+          >
+            Extended Exchange
+          </Badge>
+        );
       case 'compare':
         return (
           <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="px-3 py-1">Hyperliquid</Badge>
+            <Badge variant="secondary" className="px-3 py-1">
+              Hyperliquid
+            </Badge>
             <span className="text-muted-foreground">vs</span>
-            <Badge variant="secondary" className="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">Extended</Badge>
+            <Badge
+              variant="secondary"
+              className="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+            >
+              Extended
+            </Badge>
           </div>
         );
       default:
@@ -79,11 +98,9 @@ export default function MarketsPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <h1 className="text-4xl font-bold tracking-tight">Markets</h1>
-            <p className="text-lg text-muted-foreground">
-              {getDescription()}
-            </p>
+            <p className="text-lg text-muted-foreground">{getDescription()}</p>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <Badge variant="outline" className="text-green-600 px-3 py-1">
               <div className="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse" />
@@ -150,15 +167,19 @@ export default function MarketsPage() {
               Funding Rates
             </Button>
           </div>
-          
+
           {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={
-                activeExchange === 'compare' 
-                  ? (activeTab === 'pairs' ? "Search common pairs (e.g., BTC, ETH)..." : "Search common assets (e.g., BTC, ETH)...")
-                  : (activeTab === 'pairs' ? "Search pairs (e.g., BTC, ETH, BTC/USD)..." : "Search assets (e.g., BTC, ETH)...")
+                activeExchange === 'compare'
+                  ? activeTab === 'pairs'
+                    ? 'Search common pairs (e.g., BTC, ETH)...'
+                    : 'Search common assets (e.g., BTC, ETH)...'
+                  : activeTab === 'pairs'
+                  ? 'Search pairs (e.g., BTC, ETH, BTC/USD)...'
+                  : 'Search assets (e.g., BTC, ETH)...'
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -168,9 +189,7 @@ export default function MarketsPage() {
         </div>
 
         {/* Tab Content */}
-        <div className="w-full">
-          {getActiveComponent()}
-        </div>
+        <div className="w-full">{getActiveComponent()}</div>
       </div>
     </div>
   );
