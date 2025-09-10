@@ -483,7 +483,7 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                               <>
                                 <div className="flex items-center justify-center gap-2">
                                   <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 text-xs">
-                                    📉 SHORT
+                                    SHORT
                                   </Badge>
                                   <span className="text-xs font-medium">
                                     Extended
@@ -491,7 +491,7 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                                 </div>
                                 <div className="flex items-center justify-center gap-2">
                                   <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs">
-                                    📈 LONG
+                                    LONG
                                   </Badge>
                                   <span className="text-xs font-medium">
                                     Hyperliquid
@@ -503,7 +503,7 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                               <>
                                 <div className="flex items-center justify-center gap-2">
                                   <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 text-xs">
-                                    📉 SHORT
+                                    SHORT
                                   </Badge>
                                   <span className="text-xs font-medium">
                                     Hyperliquid
@@ -511,7 +511,7 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                                 </div>
                                 <div className="flex items-center justify-center gap-2">
                                   <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs">
-                                    📈 LONG
+                                    LONG
                                   </Badge>
                                   <span className="text-xs font-medium">
                                     Extended
