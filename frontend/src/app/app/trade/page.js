@@ -105,24 +105,25 @@ export default function TradePage() {
         {/* Trading Strategy Info */}
         <div className="p-6 bg-muted/20 rounded-lg border">
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">How Funding Rate Arbitrage Works</h3>
+            <h3 className="text-lg font-semibold">Delta Neutral Funding Rate Arbitrage</h3>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <h4 className="font-medium">Strategy Overview</h4>
+                <h4 className="font-medium">How It Works</h4>
                 <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Identify assets with funding rate differences &gt;10bp</li>
-                  <li>• Go long on the exchange with lower funding rates</li>
-                  <li>• Go short on the exchange with higher funding rates</li>
-                  <li>• Collect the funding rate differential every 8 hours</li>
+                  <li>• The table shows exactly which platform to SHORT and LONG</li>
+                  <li>• Strategy recommendations appear when rate difference &gt;5bp</li>
+                  <li>• Go SHORT on the exchange with higher funding rates</li>
+                  <li>• Go LONG on the exchange with lower funding rates</li>
+                  <li>• Collect funding rate differential every 8 hours automatically</li>
                 </ul>
               </div>
               <div className="space-y-2">
-                <h4 className="font-medium">Risk Considerations</h4>
+                <h4 className="font-medium">Reading the Strategy Column</h4>
                 <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Market price movements can impact profitability</li>
-                  <li>• Liquidity differences between exchanges</li>
-                  <li>• Position size limits and margin requirements</li>
-                  <li>• Network congestion and execution delays</li>
+                  <li>• 📉 SHORT: Platform where you open short positions</li>
+                  <li>• 📈 LONG: Platform where you open long positions</li>
+                  <li>• Expected Funding: Your profit per 8-hour period</li>
+                  <li>• APR: Annualized return from funding differentials</li>
                 </ul>
               </div>
             </div>

@@ -247,7 +247,7 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                 </th>
                 <th className="text-center p-4 font-semibold">Daily APR</th>
                 <th className="text-center p-4 font-semibold">Open Interest</th>
-                <th className="text-center p-4 font-semibold">Mark Prices</th>
+                <th className="text-center p-4 font-semibold">Delta Neutral Strategy</th>
                 <th className="text-center p-4 font-semibold">Actions</th>
               </tr>
             </thead>
@@ -382,26 +382,85 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                     </td>
 
                     <td className="p-4">
-                      <div className="space-y-1 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-blue-500" />
-                          <span className="font-mono text-sm">
-                            $
-                            {(item.hl.price || 0).toLocaleString('en-US', {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 6,
-                            })}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-purple-500" />
-                          <span className="font-mono text-sm">
-                            $
-                            {(item.ex.price || 0).toLocaleString('en-US', {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 6,
-                            })}
-                          </span>
+                      <div className="text-center">
+                        <div className="space-y-2">
+                          {/* Strategy Recommendation - Always Show */}
+                          <div className="space-y-1">
+                            {item.fundingDiff > 0 ? (
+                              // Extended has higher funding rate - collect funding there
+                              <>
+                                <div className="flex items-center justify-center gap-2">
+                                  <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 text-xs">
+                                    📉 SHORT
+                                  </Badge>
+                                  <span className="text-xs font-medium">Extended</span>
+                                </div>
+                                <div className="flex items-center justify-center gap-2">
+                                  <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs">
+                                    📈 LONG
+                                  </Badge>
+                                  <span className="text-xs font-medium">Hyperliquid</span>
+                                </div>
+                              </>
+                            ) : (
+                              // Hyperliquid has higher funding rate - collect funding there
+                              <>
+                                <div className="flex items-center justify-center gap-2">
+                                  <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 text-xs">
+                                    📉 SHORT
+                                  </Badge>
+                                  <span className="text-xs font-medium">Hyperliquid</span>
+                                </div>
+                                <div className="flex items-center justify-center gap-2">
+                                  <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs">
+                                    📈 LONG
+                                  </Badge>
+                                  <span className="text-xs font-medium">Extended</span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          
+                          {/* Opportunity Strength Indicator - Only if meaningful */}
+                          {fundingDiffAbs > 2 && (
+                            <div className="flex items-center justify-center">
+                              {fundingDiffAbs > 20 ? (
+                                <Badge variant="destructive" className="text-xs">
+                                  🔥 Excellent
+                                </Badge>
+                              ) : fundingDiffAbs > 10 ? (
+                                <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 text-xs">
+                                  ⚡ Good
+                                </Badge>
+                              ) : fundingDiffAbs > 5 ? (
+                                <Badge className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300 text-xs">
+                                  💡 Fair
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 text-xs">
+                                  📊 Weak
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Risk/Confidence Level */}
+                          <div className="flex justify-center">
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <div
+                                  key={star}
+                                  className={`w-2 h-2 rounded-full ${
+                                    star <= Math.min(5, Math.max(1, Math.ceil(fundingDiffAbs / 5)))
+                                      ? fundingDiffAbs > 15 ? 'bg-green-500' :
+                                        fundingDiffAbs > 8 ? 'bg-yellow-500' :
+                                        fundingDiffAbs > 3 ? 'bg-orange-500' : 'bg-gray-500'
+                                      : 'bg-gray-200 dark:bg-gray-700'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </td>
