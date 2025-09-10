@@ -18,7 +18,8 @@ export default function TradePage() {
           <div className="space-y-2">
             <h1 className="text-4xl font-bold tracking-tight">Trade</h1>
             <p className="text-lg text-muted-foreground">
-              Compare funding rates across exchanges and find arbitrage opportunities
+              Compare funding rates across exchanges and find arbitrage
+              opportunities
             </p>
           </div>
 
@@ -84,9 +85,12 @@ export default function TradePage() {
         {/* Search and Filters */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <h2 className="text-2xl font-semibold">Funding Rate Opportunities</h2>
+            <h2 className="text-2xl font-semibold">
+              Funding Rate Opportunities
+            </h2>
             <p className="text-muted-foreground">
-              Real-time funding rate comparison across Hyperliquid and Extended Exchange
+              Real-time funding rate comparison across Hyperliquid and Extended
+              Exchange
             </p>
           </div>
 
@@ -105,16 +109,26 @@ export default function TradePage() {
         {/* Trading Strategy Info */}
         <div className="p-6 bg-muted/20 rounded-lg border">
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Delta Neutral Funding Rate Arbitrage</h3>
+            <h3 className="text-lg font-semibold">
+              Delta Neutral Funding Rate Arbitrage
+            </h3>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <h4 className="font-medium">How It Works</h4>
                 <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• The table shows exactly which platform to SHORT and LONG</li>
-                  <li>• Strategy recommendations appear when rate difference &gt;5bp</li>
+                  <li>
+                    • The table shows exactly which platform to SHORT and LONG
+                  </li>
+                  <li>
+                    • Strategy recommendations appear when rate difference
+                    &gt;5bp
+                  </li>
                   <li>• Go SHORT on the exchange with higher funding rates</li>
                   <li>• Go LONG on the exchange with lower funding rates</li>
-                  <li>• Collect funding rate differential every 8 hours automatically</li>
+                  <li>
+                    • Collect funding rate differential every 8 hours
+                    automatically
+                  </li>
                 </ul>
               </div>
               <div className="space-y-2">
@@ -154,19 +168,29 @@ export default function TradePage() {
             <h3 className="text-lg font-semibold mb-4">Performance Metrics</h3>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Today&apos;s PnL:</span>
-                <span className="text-sm font-mono text-green-600">+$124.56</span>
+                <span className="text-sm text-muted-foreground">
+                  Today&apos;s PnL:
+                </span>
+                <span className="text-sm font-mono text-green-600">
+                  +$124.56
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Total Positions:</span>
+                <span className="text-sm text-muted-foreground">
+                  Total Positions:
+                </span>
                 <span className="text-sm font-mono">0</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Avg. Funding Earned:</span>
+                <span className="text-sm text-muted-foreground">
+                  Avg. Funding Earned:
+                </span>
                 <span className="text-sm font-mono">+0.0234%</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Success Rate:</span>
+                <span className="text-sm text-muted-foreground">
+                  Success Rate:
+                </span>
                 <span className="text-sm font-mono">78.5%</span>
               </div>
             </div>
