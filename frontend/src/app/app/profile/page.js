@@ -113,14 +113,14 @@ export default function ProfilePage() {
     if (!owner) return;
     try {
       setLoadingAgent(true);
-      const res = await fetch(`/api/agents/hl?owner=${owner}`, { cache: 'no-store' });
+      const res = await fetch(`/api/agent/hl/get-agent?owner=${owner}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setAgent(data && (data.agent_address || data.agent_name || data.expiry_unix) ? data : null);
       } else if (res.status === 404) {
         setAgent(null);
       } else {
-        const resList = await fetch(`/api/agents?owner=${owner}`, { cache: 'no-store' });
+        const resList = await fetch(`/api/agent?owner=${owner}`, { cache: 'no-store' });
         const list = await resList.json().catch(() => []);
         setAgent(Array.isArray(list) && list.length ? list[0] : null);
       }
@@ -164,7 +164,7 @@ export default function ProfilePage() {
   const refreshExtended = async () => {
     if (!owner) { setExtKeyInfo(null); return null; }
     try {
-      const r = await fetch(`/api/extended/agents?owner=${owner}`, { cache: 'no-store' });
+      const r = await fetch(`/api/agent/extended/get-agent?owner=${owner}`, { cache: 'no-store' });
       if (r.status === 404) { setExtKeyInfo(null); return null; }
       if (!r.ok)        { setExtKeyInfo(null); return null; }
       const j = await r.json();
@@ -209,19 +209,19 @@ export default function ProfilePage() {
       setExtStatus('1/3 Onboarding default account (index 0)…');
       try {
         const tdKD0 = await fetch(
-          `/api/extended/typed-data/key-derivation?wallet=${owner}&account_index=0`,
+          `/api/agent/extended/typed-data/key-derivation?wallet=${owner}&account_index=0`,
           { cache: 'no-store' }
         ).then(r => fetchJsonOrThrow(r, 'Failed TD: key-derivation (0)'));
         const sigKD0 = await signTypedDataAndVerify(tdKD0, owner);
 
         const tdREG0 = await fetch(
-          `/api/extended/typed-data/registration?wallet=${owner}&account_index=0&action=REGISTER`,
+          `/api/agent/extended/typed-data/registration?wallet=${owner}&account_index=0&action=REGISTER`,
           { cache: 'no-store' }
         ).then(r => fetchJsonOrThrow(r, 'Failed TD: registration (0)'));
         const sigREG0 = await signTypedDataAndVerify(tdREG0, owner);
         const time0 = tdREG0?.message?.time;
 
-        const r0 = await fetch('/api/extended/onboarding', {
+        const r0 = await fetch('/api/agent/extended/onboarding', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
@@ -244,25 +244,25 @@ export default function ProfilePage() {
       setExtStatus('2/3 Creating subaccount (index 1)…');
       try {
         const tdKD = await fetch(
-          `/api/extended/typed-data/key-derivation?wallet=${owner}&account_index=${EXTENDED_INDEX}`,
+          `/api/agent/extended/typed-data/key-derivation?wallet=${owner}&account_index=${EXTENDED_INDEX}`,
           { cache: 'no-store' }
         ).then(r => fetchJsonOrThrow(r, 'Failed TD: key-derivation (1)'));
         const sigKD = await signTypedDataAndVerify(tdKD, owner);
 
         const tdREG = await fetch(
-          `/api/extended/typed-data/registration?wallet=${owner}&account_index=${EXTENDED_INDEX}&action=CREATE_SUB_ACCOUNT`,
+          `/api/agent/extended/typed-data/registration?wallet=${owner}&account_index=${EXTENDED_INDEX}&action=CREATE_SUB_ACCOUNT`,
           { cache: 'no-store' }
         ).then(r => fetchJsonOrThrow(r, 'Failed TD: registration (1)'));
         const sigREG = await signTypedDataAndVerify(tdREG, owner);
         const regTime = tdREG?.message?.time;
 
         const challenge = await fetch(
-          `/api/extended/challenge?path=${encodeURIComponent('/auth/onboard/subaccount')}`,
+          `/api/agent/extended/challenge?path=${encodeURIComponent('/auth/onboard/subaccount')}`,
           { cache: 'no-store' }
         ).then(r => fetchJsonOrThrow(r, 'Failed subaccount auth challenge'));
         const authSig = await personalSign(challenge.message);
 
-        const rSub = await fetch('/api/extended/onboarding/subaccount', {
+        const rSub = await fetch('/api/agent/extended/onboarding/subaccount', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
@@ -287,11 +287,11 @@ export default function ProfilePage() {
       // 3) Create API key for subaccount 1 (2-step challenge)
       setExtStatus('3/3 Creating API key (index 1)…');
       const path1 = '/api/v1/user/accounts';
-      const c1 = await fetch(`/api/extended/challenge?path=${encodeURIComponent(path1)}`, { cache: 'no-store' })
+      const c1 = await fetch(`/api/agent/extended/challenge?path=${encodeURIComponent(path1)}`, { cache: 'no-store' })
         .then(r => fetchJsonOrThrow(r, 'Invalid challenge for /accounts'));
       const sig1 = await personalSign(c1.message);
 
-      let r = await fetch('/api/extended/check-or-create-api-key', {
+      let r = await fetch('/api/agent/extended/check-or-create-api-key', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
@@ -321,7 +321,7 @@ export default function ProfilePage() {
       const sig2 = await personalSign(challenge2);
       const [, t2] = challenge2.split('@');
 
-      const r2 = await fetch('/api/extended/create-api-key', {
+      const r2 = await fetch('/api/agent/extended/create-api-key', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
@@ -399,7 +399,7 @@ export default function ProfilePage() {
       }
       const { r, s, v } = splitSigRSV(sigHex);
 
-      const resp = await fetch('/api/agents/hl/approve-agent', {
+      const resp = await fetch('/api/agent/hl/approve-agent', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
@@ -444,7 +444,7 @@ export default function ProfilePage() {
       }
       const { r, s, v } = splitSigRSV(sigHex);
 
-      const resp = await fetch('/api/agents/hl/revoke-agent', {
+      const resp = await fetch('/api/agent/hl/revoke-agent', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({

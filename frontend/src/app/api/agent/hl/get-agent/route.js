@@ -1,4 +1,4 @@
-import { backendUrl, proxyInit } from '../../_config';
+import { backendUrl, proxyInit } from '../../../_config';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request) {

@@ -36,6 +36,18 @@ export function AppNavBar() {
             >
               Profile
             </a>
+            <a
+              className="transition-colors hover:text-foreground/80 text-foreground/60"
+              href="/app/trade_hl"
+            >
+              trade_hl
+            </a>
+            <a
+              className="transition-colors hover:text-foreground/80 text-foreground/60"
+              href="/app/trade_extended"
+            >
+              trade_extended
+            </a>
           </nav>
         </div>
         <div className="flex items-center space-x-3">
