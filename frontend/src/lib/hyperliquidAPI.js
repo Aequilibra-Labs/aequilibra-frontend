@@ -230,11 +230,15 @@ export class HyperliquidAPI {
   static generateHistoricalFallback(coin, currentRate, startTime, endTime) {
     const dataPoints = [];
     const totalHours = (endTime - startTime) / 3600;
-    const fundingPeriodsPerDay = 3; // Hyperliquid uses 8-hour funding periods
-    const totalPeriods = Math.floor(totalHours / 8);
+    const intervalHours = 8; // 8-hour funding periods
+    const totalPeriods = Math.ceil(totalHours / intervalHours);
 
+    // Generate data points from start to end, ensuring we include the most recent data
     for (let i = 0; i < totalPeriods; i++) {
-      const timestamp = startTime + i * 8 * 3600; // 8-hour intervals
+      const timestamp = startTime + i * intervalHours * 3600;
+      
+      // Stop if we exceed endTime
+      if (timestamp > endTime) break;
 
       // Add realistic variation around the current rate
       const baseVariation = currentRate * 0.1; // 10% base variation
@@ -247,6 +251,16 @@ export class HyperliquidAPI {
       dataPoints.push({
         timestamp,
         fundingRate: Math.max(historicalRate, -0.01), // Prevent extremely negative rates
+        coin: coin,
+      });
+    }
+
+    // Ensure we have a data point very close to endTime (current time)
+    const lastTimestamp = dataPoints[dataPoints.length - 1]?.timestamp || startTime;
+    if (endTime - lastTimestamp > intervalHours * 3600 / 2) {
+      dataPoints.push({
+        timestamp: endTime - 3600, // 1 hour ago from endTime
+        fundingRate: currentRate, // Use current rate for most recent data
         coin: coin,
       });
     }

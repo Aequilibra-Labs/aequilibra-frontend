@@ -102,6 +102,20 @@ export async function GET(request) {
         limitNum
       );
 
+      console.log(
+        'Generated historical data:',
+        historicalData.length,
+        'points'
+      );
+      console.log(
+        'Date range:',
+        new Date(historicalData[0]?.timestamp * 1000).toLocaleDateString(),
+        'to',
+        new Date(
+          historicalData[historicalData.length - 1]?.timestamp * 1000
+        ).toLocaleDateString()
+      );
+
       return Response.json({
         status: 'OK',
         data: historicalData,
@@ -168,6 +182,19 @@ function generateHistoricalFundingData(
     });
 
     currentTimestamp += interval;
+  }
+
+  // Ensure we have a data point very close to the current time
+  if (data.length > 0) {
+    const lastPoint = data[data.length - 1];
+    if (endTime - lastPoint.timestamp > interval / 2) {
+      data.push({
+        timestamp: endTime - 3600, // 1 hour ago from current time
+        fundingRate: currentRate, // Use current rate for most recent data
+        time: (endTime - 3600) * 1000,
+        market: market,
+      });
+    }
   }
 
   return data.reverse(); // Most recent first

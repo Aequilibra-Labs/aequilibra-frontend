@@ -64,6 +64,11 @@ const SpreadHistoryChart = ({ asset, timePeriod = 30 }) => {
           hyperliquidHistory
         );
         console.log('Processed data points:', processedData.length);
+        console.log('Date range in processed data:', 
+          processedData.length > 0 ? new Date(processedData[0].timestamp * 1000).toLocaleDateString() : 'N/A',
+          'to',
+          processedData.length > 0 ? new Date(processedData[processedData.length - 1].timestamp * 1000).toLocaleDateString() : 'N/A'
+        );
 
         // Check if we have real historical data or generated fallback
         const hasRealData =
@@ -122,15 +127,17 @@ const SpreadHistoryChart = ({ asset, timePeriod = 30 }) => {
   const processSpreadData = (extendedData, hyperliquidData) => {
     const spreadData = [];
 
-    // Create a time-based map for easier lookup
+    // Create a time-based map for easier lookup - use more flexible time matching
     const extendedMap = new Map();
     extendedData.forEach((point) => {
-      extendedMap.set(Math.floor(point.timestamp / 3600) * 3600, point); // Round to nearest hour
+      const hourlyTimestamp = Math.floor(point.timestamp / 3600) * 3600; // Round to nearest hour
+      extendedMap.set(hourlyTimestamp, point);
     });
 
     const hyperliquidMap = new Map();
     hyperliquidData.forEach((point) => {
-      hyperliquidMap.set(Math.floor(point.timestamp / 3600) * 3600, point);
+      const hourlyTimestamp = Math.floor(point.timestamp / 3600) * 3600; // Round to nearest hour
+      hyperliquidMap.set(hourlyTimestamp, point);
     });
 
     // Get all unique timestamps and sort
@@ -139,31 +146,76 @@ const SpreadHistoryChart = ({ asset, timePeriod = 30 }) => {
       ...hyperliquidMap.keys(),
     ]);
 
-    Array.from(allTimestamps)
-      .sort()
-      .forEach((timestamp) => {
-        const extendedPoint = extendedMap.get(timestamp);
-        const hyperliquidPoint = hyperliquidMap.get(timestamp);
+    const sortedTimestamps = Array.from(allTimestamps).sort();
 
-        if (extendedPoint && hyperliquidPoint) {
-          const extendedRate = parseFloat(extendedPoint.fundingRate) || 0;
-          const hyperliquidRate = parseFloat(hyperliquidPoint.fundingRate) || 0;
-          const spread = Math.abs(extendedRate - hyperliquidRate);
-          const spreadPercent = spread * 100; // Convert to percentage
+    // Process data with better fallback logic
+    sortedTimestamps.forEach((timestamp) => {
+      let extendedPoint = extendedMap.get(timestamp);
+      let hyperliquidPoint = hyperliquidMap.get(timestamp);
 
-          spreadData.push({
-            timestamp,
-            date: new Date(timestamp * 1000).toLocaleDateString(),
-            time: new Date(timestamp * 1000).toLocaleTimeString(),
-            extendedRate: extendedRate * 100, // Convert to percentage for display
-            hyperliquidRate: hyperliquidRate * 100, // Convert to percentage for display
-            spread: spreadPercent,
-            spreadBps: spread * 10000, // Basis points
-          });
+      // If exact match not found, try to find closest data point within 4 hours
+      if (!extendedPoint) {
+        for (let i = 1; i <= 4; i++) {
+          const nearbyTimestamp1 = timestamp + i * 3600;
+          const nearbyTimestamp2 = timestamp - i * 3600;
+          if (extendedMap.has(nearbyTimestamp1)) {
+            extendedPoint = extendedMap.get(nearbyTimestamp1);
+            break;
+          }
+          if (extendedMap.has(nearbyTimestamp2)) {
+            extendedPoint = extendedMap.get(nearbyTimestamp2);
+            break;
+          }
         }
-      });
+      }
 
-    return spreadData.slice(-timePeriod * 8); // 8 funding periods per day
+      if (!hyperliquidPoint) {
+        for (let i = 1; i <= 4; i++) {
+          const nearbyTimestamp1 = timestamp + i * 3600;
+          const nearbyTimestamp2 = timestamp - i * 3600;
+          if (hyperliquidMap.has(nearbyTimestamp1)) {
+            hyperliquidPoint = hyperliquidMap.get(nearbyTimestamp1);
+            break;
+          }
+          if (hyperliquidMap.has(nearbyTimestamp2)) {
+            hyperliquidPoint = hyperliquidMap.get(nearbyTimestamp2);
+            break;
+          }
+        }
+      }
+
+      // Only include points where we have data from at least one exchange
+      if (extendedPoint || hyperliquidPoint) {
+        const extendedRate = extendedPoint ? parseFloat(extendedPoint.fundingRate) || 0 : 0;
+        const hyperliquidRate = hyperliquidPoint ? parseFloat(hyperliquidPoint.fundingRate) || 0 : 0;
+        const spread = Math.abs(extendedRate - hyperliquidRate);
+        const spreadPercent = spread * 100; // Convert to percentage
+
+        const dateObj = new Date(timestamp * 1000);
+        const formattedDate = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+
+        spreadData.push({
+          timestamp,
+          date: formattedDate, // Shorter format MM/DD
+          time: dateObj.toLocaleTimeString(),
+          extendedRate: extendedRate * 100, // Convert to percentage for display
+          hyperliquidRate: hyperliquidRate * 100, // Convert to percentage for display
+          spread: spreadPercent,
+          spreadBps: spread * 10000, // Basis points
+        });
+      }
+    });
+
+    // Return all processed data (remove the slice limitation)
+    console.log('Total processed spread data points:', spreadData.length);
+    if (spreadData.length > 0) {
+      console.log('Date range:', 
+        spreadData[0].date, 'to', spreadData[spreadData.length - 1].date,
+        '(', new Date(spreadData[0].timestamp * 1000).toLocaleDateString(), 
+        'to', new Date(spreadData[spreadData.length - 1].timestamp * 1000).toLocaleDateString(), ')'
+      );
+    }
+    return spreadData;
   };
 
   const CustomTooltip = ({ active, payload, label }) => {
