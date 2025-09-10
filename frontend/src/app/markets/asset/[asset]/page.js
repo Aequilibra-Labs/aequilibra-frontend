@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,8 +20,13 @@ import {
   Activity,
   PieChart,
 } from 'lucide-react';
-import { useHyperliquidFunding, useHyperliquidMarkets } from '@/lib/hyperliquidAPI';
+import {
+  useHyperliquidFunding,
+  useHyperliquidMarkets,
+} from '@/lib/hyperliquidAPI';
 import { useExtendedFunding, useExtendedMarkets } from '@/lib/extendedAPI';
+import { calculateDeltaNeutralAPY, debugRates } from '@/lib/apyCalculations';
+import SpreadHistoryChart from '@/components/charts/SpreadHistoryChart';
 import {
   LineChart,
   Line,
@@ -31,8 +36,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  ComposedChart,
-  Bar,
 } from 'recharts';
 
 export default function AssetPage() {
@@ -43,45 +46,37 @@ export default function AssetPage() {
   // State for user inputs
   const [hlAmount, setHlAmount] = useState('');
   const [exAmount, setExAmount] = useState('');
+  const [timePeriod, setTimePeriod] = useState('year'); // 'hours', 'days', 'year'
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  // Get data from both exchanges
-  const { data: hlFundingData, loading: hlFundingLoading } = useHyperliquidFunding();
-  const { data: hlPairsData, loading: hlPairsLoading } = useHyperliquidMarkets();
-  const { data: exFundingData, loading: exFundingLoading } = useExtendedFunding();
-  const { data: exPairsData, loading: exPairsLoading } = useExtendedMarkets();
-
-  // Mock historical data for 30 days (in real app, this would come from API)
-  const historicalData = useMemo(() => {
-    const data = [];
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 30);
-
-    for (let i = 0; i < 30; i++) {
-      const date = new Date(startDate);
-      date.setDate(date.getDate() + i);
-      
-      // Generate mock data with some realistic patterns
-      const hlFundingBase = 0.02 + Math.sin(i * 0.3) * 0.01;
-      const exFundingBase = 0.025 + Math.sin(i * 0.25) * 0.012;
-      const volumeBase = 50000000 + Math.sin(i * 0.2) * 20000000;
-      const openInterestBase = 200000000 + Math.sin(i * 0.15) * 50000000;
-
-      data.push({
-        date: date.toISOString().split('T')[0],
-        dateFormatted: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        hlFunding: Number((hlFundingBase + Math.random() * 0.005 - 0.0025).toFixed(4)),
-        exFunding: Number((exFundingBase + Math.random() * 0.005 - 0.0025).toFixed(4)),
-        hlVolume: Math.round(volumeBase + Math.random() * 10000000 - 5000000),
-        exVolume: Math.round(volumeBase * 0.8 + Math.random() * 8000000 - 4000000),
-        hlOpenInterest: Math.round(openInterestBase + Math.random() * 20000000 - 10000000),
-        exOpenInterest: Math.round(openInterestBase * 0.9 + Math.random() * 18000000 - 9000000),
-        spread: Number((Math.abs(hlFundingBase - exFundingBase) * 100).toFixed(2)),
-      });
-    }
-    return data;
+  // Prevent hydration mismatch by only rendering after client hydration
+  useEffect(() => {
+    setIsHydrated(true);
   }, []);
 
-  // Find current asset data
+  // Get data from both exchanges
+  const { data: hlFundingData, loading: hlFundingLoading } =
+    useHyperliquidFunding();
+  const { data: hlPairsData, loading: hlPairsLoading } =
+    useHyperliquidMarkets();
+  const { data: exFundingData, loading: exFundingLoading } =
+    useExtendedFunding();
+  const { data: exPairsData, loading: exPairsLoading } = useExtendedMarkets();
+
+  const getTimePeriodLabel = () => {
+    switch (timePeriod) {
+      case 'hours':
+        return '8-Hour';
+      case 'days':
+        return 'Daily';
+      case 'year':
+        return 'Annual';
+      default:
+        return 'Annual';
+    }
+  };
+
+  // Find current asset data with real funding rates
   const assetData = useMemo(() => {
     if (!assetName) return null;
 
@@ -111,7 +106,7 @@ export default function AssetPage() {
       extended: {
         funding: exFunding,
         pairs: exPairs,
-        fundingRate: exFunding?.fundingRate || 0,
+        fundingRate: exFunding?.fundingRate || 0, // Keep in decimal format now
         price: exPairs?.price || 0,
         volume24h: exPairs?.volume24h || 0,
         openInterest: exFunding?.openInterest || 0,
@@ -119,15 +114,34 @@ export default function AssetPage() {
     };
   }, [assetName, hlFundingData, hlPairsData, exFundingData, exPairsData]);
 
+  // Calculate current delta neutral APY using real data and standardized function
+  const currentDeltaNeutralAPY = useMemo(() => {
+    if (!assetData) return { hours: 0, days: 0, year: 0 };
+
+    const hlRate = assetData.hyperliquid.fundingRate; // Decimal format
+    const exRate = assetData.extended.fundingRate; // Percentage format
+
+    // Debug rates for this asset
+    if (assetData.asset) {
+      debugRates(assetData.asset, hlRate, exRate);
+    }
+
+    return {
+      hours: calculateDeltaNeutralAPY(hlRate, exRate, 'hours'),
+      days: calculateDeltaNeutralAPY(hlRate, exRate, 'days'),
+      year: calculateDeltaNeutralAPY(hlRate, exRate, 'year'),
+    };
+  }, [assetData]);
+
   // Mock user balances (in real app, this would come from wallet connection)
   const userBalances = {
     hyperliquid: {
-      total: 15420.50,
+      total: 15420.5,
       available: 12330.25,
       inPosition: 3090.25,
     },
     extended: {
-      total: 8750.30,
+      total: 8750.3,
       available: 7200.15,
       inPosition: 1550.15,
     },
@@ -138,9 +152,11 @@ export default function AssetPage() {
     // No positions by default - user starts with empty portfolio
   ];
 
-  const loading = hlFundingLoading || hlPairsLoading || exFundingLoading || exPairsLoading;
+  const loading =
+    hlFundingLoading || hlPairsLoading || exFundingLoading || exPairsLoading;
 
-  if (loading) {
+  // Prevent hydration mismatch - show loading during SSR and initial hydration
+  if (!isHydrated || loading) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
@@ -182,9 +198,11 @@ export default function AssetPage() {
       alert('Please enter amounts for both exchanges');
       return;
     }
-    
+
     // In real app, this would execute the neutral strategy
-    alert(`Executing neutral strategy with $${hlAmount} on Hyperliquid and $${exAmount} on Extended Exchange`);
+    alert(
+      `Executing neutral strategy with $${hlAmount} on Hyperliquid and $${exAmount} on Extended Exchange`
+    );
   };
 
   return (
@@ -208,146 +226,185 @@ export default function AssetPage() {
 
         {/* Main Content Grid */}
         <div className="grid lg:grid-cols-4 gap-8">
-          {/* Left Side - Charts (3/4 width) */}
+          {/* Left Side - Current APY Display (3/4 width) */}
           <div className="lg:col-span-3 space-y-6">
-            {/* Funding Rate Chart */}
+            {/* Current Delta Neutral Strategy APY */}
             <Card className="p-6">
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-semibold">
-                    Funding Rate - Last 30 Days
+                    Current Delta Neutral Strategy APY
                   </h2>
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                      <span className="text-sm">Hyperliquid</span>
+                    {/* Time Period Selector */}
+                    <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
+                      {['hours', 'days', 'year'].map((period) => (
+                        <button
+                          key={period}
+                          onClick={() => setTimePeriod(period)}
+                          className={`px-3 py-1 text-xs rounded-md font-medium transition-colors ${
+                            timePeriod === period
+                              ? 'bg-primary text-primary-foreground'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          {period === 'hours'
+                            ? '8H'
+                            : period === 'days'
+                            ? 'Daily'
+                            : 'Annual'}
+                        </button>
+                      ))}
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-purple-500 rounded"></div>
-                      <span className="text-sm">Extended Exchange</span>
+                      <div className="w-3 h-3 bg-green-500 rounded"></div>
+                      <span className="text-sm">Live APY (Real Data)</span>
                     </div>
                   </div>
                 </div>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={historicalData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="dateFormatted" 
-                        tick={{ fontSize: 12 }}
-                      />
-                      <YAxis 
-                        tick={{ fontSize: 12 }}
-                        tickFormatter={(value) => `${(value * 100).toFixed(2)}%`}
-                      />
-                      <Tooltip 
-                        formatter={(value, name) => [
-                          `${(value * 100).toFixed(4)}%`,
-                          name === 'hlFunding' ? 'Hyperliquid' : 'Extended Exchange'
-                        ]}
-                        labelFormatter={(label) => `Date: ${label}`}
-                      />
-                      <Legend />
-                      <Line 
-                        type="monotone" 
-                        dataKey="hlFunding" 
-                        stroke="#3b82f6" 
-                        strokeWidth={2}
-                        name="Hyperliquid Funding"
-                        dot={{ fill: '#3b82f6', strokeWidth: 2, r: 3 }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="exFunding" 
-                        stroke="#8b5cf6" 
-                        strokeWidth={2}
-                        name="Extended Funding"
-                        dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 3 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+
+                {/* Current APY Display */}
+                <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 rounded-lg p-8 text-center">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium text-muted-foreground">
+                      Current {getTimePeriodLabel()} Delta Neutral APY
+                    </h3>
+                    <div className="text-6xl font-bold text-green-600">
+                      {currentDeltaNeutralAPY[timePeriod] > 0 ? '+' : ''}
+                      {currentDeltaNeutralAPY[timePeriod].toFixed(
+                        timePeriod === 'hours'
+                          ? 4
+                          : timePeriod === 'days'
+                          ? 3
+                          : 1
+                      )}
+                      %
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Based on current funding rates from both exchanges
+                    </div>
+                    {Math.abs(
+                      assetData.hyperliquid.fundingRate -
+                        assetData.extended.fundingRate
+                    ) > 0.0001 && (
+                      <div className="mt-4 p-4 bg-white/50 dark:bg-black/20 rounded-lg">
+                        <div className="text-sm space-y-2">
+                          <div className="font-medium">Current Strategy:</div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="text-center">
+                              <div className="text-red-600 font-medium">
+                                SHORT{' '}
+                                {assetData.hyperliquid.fundingRate >
+                                assetData.extended.fundingRate
+                                  ? 'Hyperliquid'
+                                  : 'Extended Exchange'}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Higher funding rate:{' '}
+                                {assetData.hyperliquid.fundingRate >
+                                assetData.extended.fundingRate
+                                  ? (
+                                      assetData.hyperliquid.fundingRate * 100
+                                    ).toFixed(3)
+                                  : (
+                                      assetData.extended.fundingRate * 100
+                                    ).toFixed(3)}
+                                %
+                              </div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-green-600 font-medium">
+                                LONG{' '}
+                                {assetData.hyperliquid.fundingRate >
+                                assetData.extended.fundingRate
+                                  ? 'Extended Exchange'
+                                  : 'Hyperliquid'}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Lower funding rate:{' '}
+                                {assetData.hyperliquid.fundingRate <
+                                assetData.extended.fundingRate
+                                  ? (
+                                      assetData.hyperliquid.fundingRate * 100
+                                    ).toFixed(3)
+                                  : (
+                                      assetData.extended.fundingRate * 100
+                                    ).toFixed(3)}
+                                %
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Funding Rate Comparison */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <Card className="p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                      <h4 className="font-semibold">Hyperliquid Funding</h4>
+                    </div>
+                    <div
+                      className={`text-2xl font-bold ${
+                        assetData.hyperliquid.fundingRate > 0
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      }`}
+                    >
+                      {assetData.hyperliquid.fundingRate > 0 ? '+' : ''}
+                      {(assetData.hyperliquid.fundingRate * 100).toFixed(4)}%
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      8-hour rate
+                    </div>
+                  </Card>
+
+                  <Card className="p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-3 h-3 bg-purple-500 rounded"></div>
+                      <h4 className="font-semibold">
+                        Extended Exchange Funding
+                      </h4>
+                    </div>
+                    <div
+                      className={`text-2xl font-bold ${
+                        assetData.extended.fundingRate > 0
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      }`}
+                    >
+                      {assetData.extended.fundingRate > 0 ? '+' : ''}
+                      {(assetData.extended.fundingRate * 100).toFixed(4)}%
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      8-hour rate
+                    </div>
+                  </Card>
                 </div>
               </div>
             </Card>
 
-            {/* Volume + Open Interest Chart */}
+            {/* Historical Spread Analysis */}
             <Card className="p-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-semibold">
-                    Volume & Open Interest + Spread
-                  </h2>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                      <span className="text-sm">HL Volume</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-purple-500 rounded"></div>
-                      <span className="text-sm">EX Volume</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-500 rounded"></div>
-                      <span className="text-sm">Spread</span>
-                    </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">
+                      Historical Spread Analysis
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      30-day funding rate spread between exchanges
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-purple-600" />
                   </div>
                 </div>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={historicalData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="dateFormatted" 
-                        tick={{ fontSize: 12 }}
-                      />
-                      <YAxis 
-                        yAxisId="volume"
-                        orientation="left"
-                        tick={{ fontSize: 12 }}
-                        tickFormatter={(value) => `$${(value / 1000000).toFixed(0)}M`}
-                      />
-                      <YAxis 
-                        yAxisId="spread"
-                        orientation="right"
-                        tick={{ fontSize: 12 }}
-                        tickFormatter={(value) => `${value}bp`}
-                      />
-                      <Tooltip 
-                        formatter={(value, name) => {
-                          if (name.includes('Volume') || name.includes('Interest')) {
-                            return [`$${(value / 1000000).toFixed(2)}M`, name];
-                          }
-                          return [`${value}bp`, name];
-                        }}
-                        labelFormatter={(label) => `Date: ${label}`}
-                      />
-                      <Legend />
-                      <Bar 
-                        yAxisId="volume"
-                        dataKey="hlVolume" 
-                        fill="#3b82f6" 
-                        name="HL Volume"
-                        opacity={0.7}
-                      />
-                      <Bar 
-                        yAxisId="volume"
-                        dataKey="exVolume" 
-                        fill="#8b5cf6" 
-                        name="EX Volume"
-                        opacity={0.7}
-                      />
-                      <Line 
-                        yAxisId="spread"
-                        type="monotone" 
-                        dataKey="spread" 
-                        stroke="#10b981" 
-                        strokeWidth={2}
-                        name="Funding Spread"
-                        dot={{ fill: '#10b981', strokeWidth: 2, r: 3 }}
-                      />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
+
+                <SpreadHistoryChart asset={assetName} timePeriod={30} />
               </div>
             </Card>
           </div>
@@ -355,31 +412,37 @@ export default function AssetPage() {
           {/* Right Side - Trading Panel (1/4 width) */}
           <div className="space-y-6">
             {/* User Balances */}
-            <Card className="p-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Wallet className="h-5 w-5" />
-                  <h3 className="text-lg font-semibold">Your Balances</h3>
+            <Card className="p-8">
+              <div className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <Wallet className="h-6 w-6" />
+                  <h3 className="text-xl font-semibold">Your Balances</h3>
                 </div>
-                
+
                 {/* Hyperliquid Balance */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="font-medium">Hyperliquid</span>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <span className="font-semibold text-lg">Hyperliquid</span>
                   </div>
-                  <div className="ml-4 space-y-1 text-sm">
-                    <div className="flex justify-between">
+                  <div className="ml-6 space-y-2 text-base">
+                    <div className="flex justify-between py-1">
                       <span>Total:</span>
-                      <span className="font-mono">${userBalances.hyperliquid.total.toLocaleString()}</span>
+                      <span className="font-mono font-semibold">
+                        ${userBalances.hyperliquid.total.toLocaleString()}
+                      </span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between py-1">
                       <span>Available:</span>
-                      <span className="font-mono text-green-600">${userBalances.hyperliquid.available.toLocaleString()}</span>
+                      <span className="font-mono font-semibold text-green-600">
+                        ${userBalances.hyperliquid.available.toLocaleString()}
+                      </span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between py-1">
                       <span>In Position:</span>
-                      <span className="font-mono text-yellow-600">${userBalances.hyperliquid.inPosition.toLocaleString()}</span>
+                      <span className="font-mono font-semibold text-yellow-600">
+                        ${userBalances.hyperliquid.inPosition.toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -387,23 +450,31 @@ export default function AssetPage() {
                 <Separator />
 
                 {/* Extended Balance */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                    <span className="font-medium">Extended Exchange</span>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                    <span className="font-semibold text-lg">
+                      Extended Exchange
+                    </span>
                   </div>
-                  <div className="ml-4 space-y-1 text-sm">
-                    <div className="flex justify-between">
+                  <div className="ml-6 space-y-2 text-base">
+                    <div className="flex justify-between py-1">
                       <span>Total:</span>
-                      <span className="font-mono">${userBalances.extended.total.toLocaleString()}</span>
+                      <span className="font-mono font-semibold">
+                        ${userBalances.extended.total.toLocaleString()}
+                      </span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between py-1">
                       <span>Available:</span>
-                      <span className="font-mono text-green-600">${userBalances.extended.available.toLocaleString()}</span>
+                      <span className="font-mono font-semibold text-green-600">
+                        ${userBalances.extended.available.toLocaleString()}
+                      </span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between py-1">
                       <span>In Position:</span>
-                      <span className="font-mono text-yellow-600">${userBalances.extended.inPosition.toLocaleString()}</span>
+                      <span className="font-mono font-semibold text-yellow-600">
+                        ${userBalances.extended.inPosition.toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -411,91 +482,122 @@ export default function AssetPage() {
             </Card>
 
             {/* Trading Inputs */}
-            <Card className="p-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Target className="h-5 w-5" />
-                  <h3 className="text-lg font-semibold">Neutral Strategy</h3>
+            <Card className="p-8">
+              <div className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <Target className="h-6 w-6" />
+                  <h3 className="text-xl font-semibold">Neutral Strategy</h3>
                 </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium">Hyperliquid Amount ($)</label>
+
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-base font-semibold text-gray-700 dark:text-gray-300">
+                      Hyperliquid Amount ($)
+                    </label>
                     <Input
                       type="number"
                       placeholder="0.00"
                       value={hlAmount}
                       onChange={(e) => setHlAmount(e.target.value)}
-                      className="mt-1"
+                      className="mt-2 h-12 text-lg"
                     />
                   </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium">Extended Amount ($)</label>
+
+                  <div className="space-y-2">
+                    <label className="text-base font-semibold text-gray-700 dark:text-gray-300">
+                      Extended Amount ($)
+                    </label>
                     <Input
                       type="number"
                       placeholder="0.00"
                       value={exAmount}
                       onChange={(e) => setExAmount(e.target.value)}
-                      className="mt-1"
+                      className="mt-2 h-12 text-lg"
                     />
                   </div>
 
-                  <Button 
-                    className="w-full" 
+                  <Button
+                    className="w-full h-14 text-lg font-semibold"
                     onClick={handleNeutralTrade}
                     disabled={!hlAmount || !exAmount}
                   >
-                    <Activity className="h-4 w-4 mr-2" />
+                    <Activity className="h-5 w-5 mr-3" />
                     Execute Neutral Trade
                   </Button>
 
-                  <div className="text-xs text-muted-foreground">
-                    This will execute opposite positions on both exchanges to capture funding rate differences while remaining market neutral.
+                  <div className="text-sm text-muted-foreground bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+                    This will execute opposite positions on both exchanges to
+                    capture funding rate differences while remaining market
+                    neutral.
                   </div>
                 </div>
               </div>
             </Card>
 
             {/* Quick Stats */}
-            <Card className="p-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Current Metrics</h3>
-                
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">HL Funding:</span>
-                    <span className={`font-mono text-sm ${
-                      assetData.hyperliquid.fundingRate > 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
+            <Card className="p-8">
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold">Current Metrics</h3>
+
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-base font-medium">HL Funding:</span>
+                    <span
+                      className={`font-mono text-base font-semibold ${
+                        assetData.hyperliquid.fundingRate > 0
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      }`}
+                    >
                       {assetData.hyperliquid.fundingRate > 0 ? '+' : ''}
-                      {(assetData.hyperliquid.fundingRate * 100).toFixed(3)}%
+                      {(assetData.hyperliquid.fundingRate * 100).toFixed(4)}%
                     </span>
                   </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">EX Funding:</span>
-                    <span className={`font-mono text-sm ${
-                      assetData.extended.fundingRate > 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
+
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-base font-medium">EX Funding:</span>
+                    <span
+                      className={`font-mono text-base font-semibold ${
+                        assetData.extended.fundingRate > 0
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      }`}
+                    >
                       {assetData.extended.fundingRate > 0 ? '+' : ''}
-                      {(assetData.extended.fundingRate * 100).toFixed(3)}%
+                      {(assetData.extended.fundingRate * 100).toFixed(4)}%
                     </span>
                   </div>
 
                   <Separator />
 
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Price Diff:</span>
-                    <span className="font-mono text-sm">
-                      ${Math.abs(assetData.hyperliquid.price - assetData.extended.price).toFixed(2)}
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-base font-medium">Price Diff:</span>
+                    <span className="font-mono text-base font-semibold">
+                      $
+                      {Math.abs(
+                        assetData.hyperliquid.price - assetData.extended.price
+                      ).toFixed(2)}
                     </span>
                   </div>
 
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Funding Spread:</span>
-                    <span className="font-mono text-sm">
-                      {Math.abs((assetData.hyperliquid.fundingRate - assetData.extended.fundingRate) * 10000).toFixed(1)}bp
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-base font-medium">
+                      Funding Spread:
+                    </span>
+                    <span className="font-mono text-base font-semibold">
+                      {Math.abs(
+                        (assetData.hyperliquid.fundingRate -
+                          assetData.extended.fundingRate) *
+                          10000
+                      ).toFixed(1)}
+                      bp
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-base font-medium">Current APY:</span>
+                    <span className="font-mono text-base font-semibold text-green-600">
+                      +{currentDeltaNeutralAPY.year.toFixed(1)}%
                     </span>
                   </div>
                 </div>
@@ -520,26 +622,45 @@ export default function AssetPage() {
                       <th className="text-left p-4 font-semibold">Exchange</th>
                       <th className="text-left p-4 font-semibold">Side</th>
                       <th className="text-right p-4 font-semibold">Size</th>
-                      <th className="text-right p-4 font-semibold">Entry Price</th>
-                      <th className="text-right p-4 font-semibold">Current Price</th>
+                      <th className="text-right p-4 font-semibold">
+                        Entry Price
+                      </th>
+                      <th className="text-right p-4 font-semibold">
+                        Current Price
+                      </th>
                       <th className="text-right p-4 font-semibold">PnL</th>
-                      <th className="text-right p-4 font-semibold">Margin Used</th>
+                      <th className="text-right p-4 font-semibold">
+                        Margin Used
+                      </th>
                       <th className="text-center p-4 font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {openPositions.map((position) => (
-                      <tr key={position.id} className="border-b hover:bg-muted/30">
+                      <tr
+                        key={position.id}
+                        className="border-b hover:bg-muted/30"
+                      >
                         <td className="p-4">
                           <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${
-                              position.exchange === 'Hyperliquid' ? 'bg-blue-500' : 'bg-purple-500'
-                            }`}></div>
+                            <div
+                              className={`w-2 h-2 rounded-full ${
+                                position.exchange === 'Hyperliquid'
+                                  ? 'bg-blue-500'
+                                  : 'bg-purple-500'
+                              }`}
+                            ></div>
                             {position.exchange}
                           </div>
                         </td>
                         <td className="p-4">
-                          <Badge variant={position.side === 'Long' ? 'default' : 'destructive'}>
+                          <Badge
+                            variant={
+                              position.side === 'Long'
+                                ? 'default'
+                                : 'destructive'
+                            }
+                          >
                             {position.side}
                           </Badge>
                         </td>
@@ -553,12 +674,18 @@ export default function AssetPage() {
                           ${position.currentPrice.toLocaleString()}
                         </td>
                         <td className="p-4 text-right">
-                          <div className={`font-mono ${
-                            position.pnl > 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {position.pnl > 0 ? '+' : ''}${position.pnl.toFixed(2)}
+                          <div
+                            className={`font-mono ${
+                              position.pnl > 0
+                                ? 'text-green-600'
+                                : 'text-red-600'
+                            }`}
+                          >
+                            {position.pnl > 0 ? '+' : ''}$
+                            {position.pnl.toFixed(2)}
                             <div className="text-xs">
-                              ({position.pnl > 0 ? '+' : ''}{position.pnlPercent.toFixed(2)}%)
+                              ({position.pnl > 0 ? '+' : ''}
+                              {position.pnlPercent.toFixed(2)}%)
                             </div>
                           </div>
                         </td>
@@ -566,7 +693,11 @@ export default function AssetPage() {
                           ${position.margin.toFixed(2)}
                         </td>
                         <td className="p-4 text-center">
-                          <Button size="sm" variant="outline" className="text-xs">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                          >
                             Close
                           </Button>
                         </td>
@@ -579,7 +710,10 @@ export default function AssetPage() {
               <div className="text-center py-12 text-muted-foreground">
                 <PieChart className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <h3 className="text-lg font-medium mb-2">No Open Positions</h3>
-                <p>You don&apos;t have any open positions for {assetData.asset} at the moment.</p>
+                <p>
+                  You don&apos;t have any open positions for {assetData.asset}{' '}
+                  at the moment.
+                </p>
               </div>
             )}
           </div>
