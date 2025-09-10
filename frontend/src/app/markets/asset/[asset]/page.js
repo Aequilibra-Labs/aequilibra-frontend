@@ -264,7 +264,7 @@ export default function AssetPage() {
                 </div>
 
                 {/* Current APY Display */}
-                <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 rounded-lg p-8 text-center">
+                <div className="bg-gray-750 dark:bg-none rounded-lg p-8 text-center border border-gray-200 dark:border-gray-700">
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium text-muted-foreground">
                       Current {getTimePeriodLabel()} Delta Neutral APY
@@ -398,9 +398,6 @@ export default function AssetPage() {
                     <p className="text-sm text-muted-foreground">
                       30-day funding rate spread between exchanges
                     </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-purple-600" />
                   </div>
                 </div>
 
