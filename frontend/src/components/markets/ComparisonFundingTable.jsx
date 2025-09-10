@@ -19,11 +19,43 @@ import { useExtendedFunding } from '@/lib/extendedAPI';
 export function ComparisonFundingTable({ searchQuery = '' }) {
   const [sortBy, setSortBy] = useState('fundingDiff');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [timePeriod, setTimePeriod] = useState('year'); // 'hours', 'days', 'year'
   const router = useRouter();
 
   // Handler to navigate to asset page
   const handleViewAsset = (assetName) => {
     router.push(`/markets/asset/${assetName.toLowerCase()}`);
+  };
+
+  // Calculate APY for delta neutral strategy based on funding rate differential
+  const calculateDeltaNeutralAPY = (fundingDiff, timePeriod) => {
+    if (!fundingDiff) return 0;
+    
+    // fundingDiff is in basis points, convert to decimal percentage
+    const rateDifferential = Math.abs(fundingDiff) / 10000; // Convert bp to decimal
+    
+    switch (timePeriod) {
+      case 'hours':
+        // Show 8-hour differential rate as percentage
+        return Math.abs(fundingDiff) / 100; // Convert bp to percentage
+      case 'days':
+        // 3 funding periods per day - compound the differential
+        return ((1 + rateDifferential) ** 3 - 1) * 100;
+      case 'year':
+        // 3 * 365 = 1095 funding periods per year - compound the differential
+        return ((1 + rateDifferential) ** 1095 - 1) * 100;
+      default:
+        return Math.abs(fundingDiff) / 100;
+    }
+  };
+
+  const getTimePeriodLabel = () => {
+    switch (timePeriod) {
+      case 'hours': return '8H';
+      case 'days': return 'Daily';
+      case 'year': return 'Annual';
+      default: return 'Annual';
+    }
   };
 
   // Get data from both exchanges
@@ -245,7 +277,43 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                     <ArrowUpDown className="h-3 w-3" />
                   </div>
                 </th>
-                <th className="text-center p-4 font-semibold">Daily APR</th>
+                <th className="text-center p-4 font-semibold">
+                  <div className="space-y-1">
+                    <div>APY</div>
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => setTimePeriod('hours')}
+                        className={`text-xs px-2 py-1 rounded transition-colors ${
+                          timePeriod === 'hours' 
+                            ? 'bg-primary text-primary-foreground' 
+                            : 'bg-muted hover:bg-muted/80 text-muted-foreground'
+                        }`}
+                      >
+                        8H
+                      </button>
+                      <button
+                        onClick={() => setTimePeriod('days')}
+                        className={`text-xs px-2 py-1 rounded transition-colors ${
+                          timePeriod === 'days' 
+                            ? 'bg-primary text-primary-foreground' 
+                            : 'bg-muted hover:bg-muted/80 text-muted-foreground'
+                        }`}
+                      >
+                        Day
+                      </button>
+                      <button
+                        onClick={() => setTimePeriod('year')}
+                        className={`text-xs px-2 py-1 rounded transition-colors ${
+                          timePeriod === 'year' 
+                            ? 'bg-primary text-primary-foreground' 
+                            : 'bg-muted hover:bg-muted/80 text-muted-foreground'
+                        }`}
+                      >
+                        Year
+                      </button>
+                    </div>
+                  </div>
+                </th>
                 <th className="text-center p-4 font-semibold">Open Interest</th>
                 <th className="text-center p-4 font-semibold">Delta Neutral Strategy</th>
                 <th className="text-center p-4 font-semibold">Actions</th>
@@ -330,33 +398,43 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                     </td>
 
                     <td className="p-4">
-                      <div className="space-y-1 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-blue-500" />
-                          <span
-                            className={`font-mono text-sm ${
-                              item.hl.dailyFundingRate > 0
-                                ? 'text-green-600'
-                                : 'text-red-600'
-                            }`}
-                          >
-                            {item.hl.dailyFundingRate > 0 ? '+' : ''}
-                            {(item.hl.dailyFundingRate || 0).toFixed(2)}%
-                          </span>
+                      <div className="text-center space-y-2">
+                        {/* Delta Neutral Strategy APY */}
+                        <div className="space-y-1">
+                          <div className={`font-mono text-lg font-bold ${
+                            item.fundingDiff !== 0 ? 'text-green-600' : 'text-gray-500'
+                          }`}>
+                            {item.fundingDiff !== 0 ? '+' : ''}
+                            {calculateDeltaNeutralAPY(item.fundingDiff, timePeriod).toFixed(
+                              timePeriod === 'hours' ? 4 : 
+                              timePeriod === 'days' ? 3 : 1
+                            )}%
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {getTimePeriodLabel()} Delta Neutral APY
+                          </div>
                         </div>
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-purple-500" />
-                          <span
-                            className={`font-mono text-sm ${
-                              item.ex.dailyFundingRate > 0
-                                ? 'text-green-600'
-                                : 'text-red-600'
-                            }`}
-                          >
-                            {item.ex.dailyFundingRate > 0 ? '+' : ''}
-                            {(item.ex.dailyFundingRate || 0).toFixed(2)}%
-                          </span>
-                        </div>
+
+                        {/* Strategy Indicator */}
+                        {Math.abs(item.fundingDiff) > 2 && (
+                          <div className="text-xs space-y-1">
+                            <div className="text-muted-foreground">Strategy:</div>
+                            <div className="space-y-0.5">
+                              <div className="flex items-center justify-center gap-1">
+                                <span className="text-red-600 font-medium">SHORT</span>
+                                <span className="text-muted-foreground">
+                                  {item.fundingDiff > 0 ? 'Extended' : 'Hyperliquid'}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-center gap-1">
+                                <span className="text-green-600 font-medium">LONG</span>
+                                <span className="text-muted-foreground">
+                                  {item.fundingDiff > 0 ? 'Hyperliquid' : 'Extended'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </td>
 
@@ -444,23 +522,6 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                             </div>
                           )}
                           
-                          {/* Risk/Confidence Level */}
-                          <div className="flex justify-center">
-                            <div className="flex items-center gap-1">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <div
-                                  key={star}
-                                  className={`w-2 h-2 rounded-full ${
-                                    star <= Math.min(5, Math.max(1, Math.ceil(fundingDiffAbs / 5)))
-                                      ? fundingDiffAbs > 15 ? 'bg-green-500' :
-                                        fundingDiffAbs > 8 ? 'bg-yellow-500' :
-                                        fundingDiffAbs > 3 ? 'bg-orange-500' : 'bg-gray-500'
-                                      : 'bg-gray-200 dark:bg-gray-700'
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                          </div>
                         </div>
                       </div>
                     </td>
