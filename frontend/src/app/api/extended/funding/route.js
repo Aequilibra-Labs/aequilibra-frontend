@@ -29,7 +29,7 @@ export async function GET() {
         ?.filter((market) => market.active && market.marketStats)
         ?.map((market) => {
           const stats = market.marketStats;
-          const fundingRate = parseFloat(stats.fundingRate) * 100 || 0; // Convert to percentage
+          const fundingRate = parseFloat(stats.fundingRate) || 0; // Keep in decimal format like Hyperliquid
 
           return {
             symbol: market.name,
