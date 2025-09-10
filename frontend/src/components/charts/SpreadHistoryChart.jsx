@@ -293,24 +293,26 @@ const SpreadHistoryChart = ({ asset, timePeriod = 30 }) => {
             <p className="text-base text-gray-600 dark:text-gray-400 mt-2">
               30-day spread analysis between Extended Exchange and Hyperliquid
             </p>
+
+            {/* Data Explanation */}
+            <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800/5 border border-gray-200 dark:border-gray-700 rounded-lg">
+              <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                <p>
+                  <span className="font-semibold">Live Data:</span> The final
+                  point on each line represents real, live funding rates
+                </p>
+                <p>
+                  <span className="font-semibold">Historical Trend:</span> Shows
+                  realistic but simulated data leading up to the current rates
+                </p>
+                <p>
+                  <span className="font-semibold">Current Spread:</span> The
+                  spread calculation at the current moment is 100% real
+                </p>
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-3">
-            {/* Data Quality Indicator */}
-            <div
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
-                isRealData
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-700'
-                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-700'
-              }`}
-            >
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  isRealData ? 'bg-green-500' : 'bg-amber-500'
-                } animate-pulse`}
-              ></div>
-              {isRealData ? 'Live Data' : 'Simulated Data'}
-            </div>
-
             {/* Exchange Color Legend */}
             <div className="flex items-center gap-4 text-xs">
               <div className="flex items-center gap-1">
@@ -419,7 +421,7 @@ const SpreadHistoryChart = ({ asset, timePeriod = 30 }) => {
       </ResponsiveContainer>
 
       {/* Enhanced Summary statistics */}
-      <div className="mt-1.5 grid grid-cols-2 md:grid-cols-4 gap-6">
+      {/*       <div className="mt-1.5 grid grid-cols-2 md:grid-cols-4 gap-6">
         <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50 p-6 rounded-xl border border-purple-200 dark:border-purple-800">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
@@ -483,20 +485,20 @@ const SpreadHistoryChart = ({ asset, timePeriod = 30 }) => {
           </p>
         </div>
 
-        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/50 dark:to-emerald-900/50 p-6 rounded-xl border border-emerald-200 dark:border-emerald-800">
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/50 dark:to-orange-900/50 p-6 rounded-xl border border-orange-200 dark:border-orange-800">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
-            <p className="text-emerald-700 dark:text-emerald-400 text-sm font-semibold">
+            <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+            <p className="text-orange-700 dark:text-orange-400 text-sm font-semibold">
               Max Opportunity
             </p>
           </div>
-          <p className="text-2xl font-bold text-emerald-800 dark:text-emerald-200">
+          <p className="text-2xl font-bold text-orange-800 dark:text-orange-200">
             {chartData.length > 0
               ? Math.max(...chartData.map((d) => d.spread)).toFixed(4)
               : '0.0000'}
             %
           </p>
-          <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+          <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
             ~
             {chartData.length > 0
               ? (Math.max(...chartData.map((d) => d.spread)) * 365 * 3).toFixed(
@@ -506,7 +508,7 @@ const SpreadHistoryChart = ({ asset, timePeriod = 30 }) => {
             % APY
           </p>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };
