@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,46 +15,40 @@ import {
 } from 'lucide-react';
 import { useHyperliquidFunding } from '@/lib/hyperliquidAPI';
 import { useExtendedFunding } from '@/lib/extendedAPI';
+import {
+  calculateDeltaNeutralAPY,
+  getFundingDifferentialBPS,
+  getDeltaNeutralStrategy,
+  debugRates,
+} from '@/lib/apyCalculations';
 
 export function ComparisonFundingTable({ searchQuery = '' }) {
   const [sortBy, setSortBy] = useState('fundingDiff');
   const [sortOrder, setSortOrder] = useState('desc');
   const [timePeriod, setTimePeriod] = useState('year'); // 'hours', 'days', 'year'
+  const [isHydrated, setIsHydrated] = useState(false);
   const router = useRouter();
+
+  // Prevent hydration mismatch by only rendering after client hydration
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   // Handler to navigate to asset page
   const handleViewAsset = (assetName) => {
     router.push(`/markets/asset/${assetName.toLowerCase()}`);
   };
 
-  // Calculate APY for delta neutral strategy based on funding rate differential
-  const calculateDeltaNeutralAPY = (fundingDiff, timePeriod) => {
-    if (!fundingDiff) return 0;
-    
-    // fundingDiff is in basis points, convert to decimal percentage
-    const rateDifferential = Math.abs(fundingDiff) / 10000; // Convert bp to decimal
-    
-    switch (timePeriod) {
-      case 'hours':
-        // Show 8-hour differential rate as percentage
-        return Math.abs(fundingDiff) / 100; // Convert bp to percentage
-      case 'days':
-        // 3 funding periods per day - compound the differential
-        return ((1 + rateDifferential) ** 3 - 1) * 100;
-      case 'year':
-        // 3 * 365 = 1095 funding periods per year - compound the differential
-        return ((1 + rateDifferential) ** 1095 - 1) * 100;
-      default:
-        return Math.abs(fundingDiff) / 100;
-    }
-  };
-
   const getTimePeriodLabel = () => {
     switch (timePeriod) {
-      case 'hours': return '8H';
-      case 'days': return 'Daily';
-      case 'year': return 'Annual';
-      default: return 'Annual';
+      case 'hours':
+        return '8H';
+      case 'days':
+        return 'Daily';
+      case 'year':
+        return 'Annual';
+      default:
+        return 'Annual';
     }
   };
 
@@ -83,8 +77,15 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
       );
 
       if (exItem) {
-        const fundingDiff =
-          ((exItem.fundingRate || 0) - (hlItem.funding || 0)) * 100; // Convert to basis points
+        // Debug the rates for the first few items to verify format
+        if (combined.length < 3) {
+          debugRates(hlItem.coin, hlItem.funding || 0, exItem.fundingRate || 0);
+        }
+
+        const fundingDiff = getFundingDifferentialBPS(
+          hlItem.funding || 0,
+          exItem.fundingRate || 0
+        );
         const openInterestDiff =
           (exItem.openInterest || 0) && (hlItem.openInterest || 0)
             ? (((exItem.openInterest || 0) - (hlItem.openInterest || 0)) /
@@ -115,11 +116,14 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
           // Comparison metrics
           fundingDiff,
           openInterestDiff,
-          // Arbitrage opportunity indicator
-          isArbitrageOpportunity: Math.abs(fundingDiff) > 10, // More than 10 basis points difference
+          // Arbitrage opportunity indicator - increased threshold for realistic trading
+          isArbitrageOpportunity: Math.abs(fundingDiff) > 25, // More than 25 basis points difference
           // For sorting
           avgOpenInterest:
             ((hlItem.openInterest || 0) + (exItem.openInterest || 0)) / 2,
+          // Store original rates for APY calculation
+          hlFundingRate: hlItem.funding || 0,
+          exFundingRate: exItem.fundingRate || 0,
         });
       }
     });
@@ -193,14 +197,23 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
     }
   };
 
-  // Calculate arbitrage opportunities
-  const arbitrageOpportunities = filteredData.filter(
-    (item) => item.isArbitrageOpportunity
+  // Calculate arbitrage opportunities with different quality levels
+  const excellentOpportunities = filteredData.filter(
+    (item) => Math.abs(item.fundingDiff) > 50
   ).length;
+  const highQualityOpportunities = filteredData.filter(
+    (item) => Math.abs(item.fundingDiff) > 25
+  ).length;
+  const mediumOpportunities = filteredData.filter(
+    (item) =>
+      Math.abs(item.fundingDiff) > 15 && Math.abs(item.fundingDiff) <= 25
+  ).length;
+  const arbitrageOpportunities = highQualityOpportunities;
 
   const loading = hlLoading || exLoading;
 
-  if (loading) {
+  // Prevent hydration mismatch - show loading during SSR and initial hydration
+  if (!isHydrated || loading) {
     return (
       <Card className="shadow-lg border-0 bg-card/50 backdrop-blur">
         <div className="p-8">
@@ -229,11 +242,6 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
             <Badge variant="outline" className="px-3 py-1">
               {filteredData.length} common markets
             </Badge>
-            {arbitrageOpportunities > 0 && (
-              <Badge variant="destructive" className="px-3 py-1">
-                {arbitrageOpportunities} Arbitrage Ops
-              </Badge>
-            )}
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1">
                 <div className="w-2 h-2 rounded-full bg-blue-500" />
@@ -284,8 +292,8 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                       <button
                         onClick={() => setTimePeriod('hours')}
                         className={`text-xs px-2 py-1 rounded transition-colors ${
-                          timePeriod === 'hours' 
-                            ? 'bg-primary text-primary-foreground' 
+                          timePeriod === 'hours'
+                            ? 'bg-primary text-primary-foreground'
                             : 'bg-muted hover:bg-muted/80 text-muted-foreground'
                         }`}
                       >
@@ -294,8 +302,8 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                       <button
                         onClick={() => setTimePeriod('days')}
                         className={`text-xs px-2 py-1 rounded transition-colors ${
-                          timePeriod === 'days' 
-                            ? 'bg-primary text-primary-foreground' 
+                          timePeriod === 'days'
+                            ? 'bg-primary text-primary-foreground'
                             : 'bg-muted hover:bg-muted/80 text-muted-foreground'
                         }`}
                       >
@@ -304,8 +312,8 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                       <button
                         onClick={() => setTimePeriod('year')}
                         className={`text-xs px-2 py-1 rounded transition-colors ${
-                          timePeriod === 'year' 
-                            ? 'bg-primary text-primary-foreground' 
+                          timePeriod === 'year'
+                            ? 'bg-primary text-primary-foreground'
                             : 'bg-muted hover:bg-muted/80 text-muted-foreground'
                         }`}
                       >
@@ -315,23 +323,23 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                   </div>
                 </th>
                 <th className="text-center p-4 font-semibold">Open Interest</th>
-                <th className="text-center p-4 font-semibold">Delta Neutral Strategy</th>
+                <th className="text-center p-4 font-semibold">
+                  Delta Neutral Strategy
+                </th>
                 <th className="text-center p-4 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredData.map((item) => {
                 const fundingDiffAbs = Math.abs(item.fundingDiff);
-                const isSignificantDiff = fundingDiffAbs > 10; // More than 10 basis points
+                const isSignificantDiff = fundingDiffAbs > 25; // More than 25 basis points
+                const isModerateDiff = fundingDiffAbs > 15; // More than 15 basis points
+                const isLowDiff = fundingDiffAbs > 5; // More than 5 basis points
 
                 return (
                   <tr
                     key={item.symbol}
-                    className={`hover:bg-muted/30 transition-all duration-200 group ${
-                      item.isArbitrageOpportunity
-                        ? 'bg-yellow-50/20 dark:bg-yellow-900/10'
-                        : ''
-                    }`}
+                    className="hover:bg-muted/30 transition-all duration-200 group"
                   >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
@@ -358,7 +366,7 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                             }`}
                           >
                             {item.hl.fundingRate > 0 ? '+' : ''}
-                            {(item.hl.fundingRate || 0).toFixed(4)}%
+                            {((item.hl.fundingRate || 0) * 100).toFixed(4)}%
                           </span>
                         </div>
                         <div className="flex items-center justify-center gap-2">
@@ -371,7 +379,7 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                             }`}
                           >
                             {item.ex.fundingRate > 0 ? '+' : ''}
-                            {(item.ex.fundingRate || 0).toFixed(4)}%
+                            {((item.ex.fundingRate || 0) * 100).toFixed(4)}%
                           </span>
                         </div>
                       </div>
@@ -382,7 +390,9 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                         className={`font-semibold text-base ${
                           isSignificantDiff
                             ? 'text-red-600'
-                            : fundingDiffAbs > 5
+                            : isModerateDiff
+                            ? 'text-orange-600'
+                            : isLowDiff
                             ? 'text-yellow-600'
                             : 'text-green-600'
                         }`}
@@ -395,46 +405,50 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                           High Spread
                         </Badge>
                       )}
+                      {isModerateDiff && !isSignificantDiff && (
+                        <Badge
+                          variant="secondary"
+                          className="text-xs mt-1 bg-orange-100 text-orange-800"
+                        >
+                          Medium Spread
+                        </Badge>
+                      )}
+                      {isLowDiff && !isModerateDiff && (
+                        <Badge variant="outline" className="text-xs mt-1">
+                          Low Spread
+                        </Badge>
+                      )}
                     </td>
 
                     <td className="p-4">
                       <div className="text-center space-y-2">
                         {/* Delta Neutral Strategy APY */}
                         <div className="space-y-1">
-                          <div className={`font-mono text-lg font-bold ${
-                            item.fundingDiff !== 0 ? 'text-green-600' : 'text-gray-500'
-                          }`}>
+                          <div
+                            className={`font-mono text-lg font-bold ${
+                              item.fundingDiff !== 0
+                                ? 'text-green-600'
+                                : 'text-gray-500'
+                            }`}
+                          >
                             {item.fundingDiff !== 0 ? '+' : ''}
-                            {calculateDeltaNeutralAPY(item.fundingDiff, timePeriod).toFixed(
-                              timePeriod === 'hours' ? 4 : 
-                              timePeriod === 'days' ? 3 : 1
-                            )}%
+                            {calculateDeltaNeutralAPY(
+                              item.hlFundingRate,
+                              item.exFundingRate,
+                              timePeriod
+                            ).toFixed(
+                              timePeriod === 'hours'
+                                ? 4
+                                : timePeriod === 'days'
+                                ? 3
+                                : 1
+                            )}
+                            %
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {getTimePeriodLabel()} Delta Neutral APY
                           </div>
                         </div>
-
-                        {/* Strategy Indicator */}
-                        {Math.abs(item.fundingDiff) > 2 && (
-                          <div className="text-xs space-y-1">
-                            <div className="text-muted-foreground">Strategy:</div>
-                            <div className="space-y-0.5">
-                              <div className="flex items-center justify-center gap-1">
-                                <span className="text-red-600 font-medium">SHORT</span>
-                                <span className="text-muted-foreground">
-                                  {item.fundingDiff > 0 ? 'Extended' : 'Hyperliquid'}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-center gap-1">
-                                <span className="text-green-600 font-medium">LONG</span>
-                                <span className="text-muted-foreground">
-                                  {item.fundingDiff > 0 ? 'Hyperliquid' : 'Extended'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </td>
 
@@ -471,13 +485,17 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                                   <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 text-xs">
                                     📉 SHORT
                                   </Badge>
-                                  <span className="text-xs font-medium">Extended</span>
+                                  <span className="text-xs font-medium">
+                                    Extended
+                                  </span>
                                 </div>
                                 <div className="flex items-center justify-center gap-2">
                                   <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs">
                                     📈 LONG
                                   </Badge>
-                                  <span className="text-xs font-medium">Hyperliquid</span>
+                                  <span className="text-xs font-medium">
+                                    Hyperliquid
+                                  </span>
                                 </div>
                               </>
                             ) : (
@@ -487,41 +505,21 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                                   <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 text-xs">
                                     📉 SHORT
                                   </Badge>
-                                  <span className="text-xs font-medium">Hyperliquid</span>
+                                  <span className="text-xs font-medium">
+                                    Hyperliquid
+                                  </span>
                                 </div>
                                 <div className="flex items-center justify-center gap-2">
                                   <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs">
                                     📈 LONG
                                   </Badge>
-                                  <span className="text-xs font-medium">Extended</span>
+                                  <span className="text-xs font-medium">
+                                    Extended
+                                  </span>
                                 </div>
                               </>
                             )}
                           </div>
-                          
-                          {/* Opportunity Strength Indicator - Only if meaningful */}
-                          {fundingDiffAbs > 2 && (
-                            <div className="flex items-center justify-center">
-                              {fundingDiffAbs > 20 ? (
-                                <Badge variant="destructive" className="text-xs">
-                                  🔥 Excellent
-                                </Badge>
-                              ) : fundingDiffAbs > 10 ? (
-                                <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 text-xs">
-                                  ⚡ Good
-                                </Badge>
-                              ) : fundingDiffAbs > 5 ? (
-                                <Badge className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300 text-xs">
-                                  💡 Fair
-                                </Badge>
-                              ) : (
-                                <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 text-xs">
-                                  📊 Weak
-                                </Badge>
-                              )}
-                            </div>
-                          )}
-                          
                         </div>
                       </div>
                     </td>
@@ -537,38 +535,31 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                         >
                           View {item.base}
                         </Button>
-                        
+
                         {/* Strategy Information */}
                         {item.isArbitrageOpportunity ? (
-                          <div className="space-y-1">
+                          <div className="text-xs space-y-0.5">
                             {item.fundingDiff > 0 ? (
-                              <div className="text-xs space-y-0.5">
+                              <>
                                 <div className="text-red-600 font-medium">
                                   Short EX
                                 </div>
                                 <div className="text-green-600 font-medium">
                                   Long HL
                                 </div>
-                              </div>
+                              </>
                             ) : (
-                              <div className="text-xs space-y-0.5">
+                              <>
                                 <div className="text-red-600 font-medium">
                                   Short HL
                                 </div>
                                 <div className="text-green-600 font-medium">
                                   Long EX
                                 </div>
-                              </div>
+                              </>
                             )}
-                            <Badge variant="secondary" className="text-xs">
-                              {(fundingDiffAbs || 0).toFixed(0)}bp/8h
-                            </Badge>
                           </div>
-                        ) : (
-                          <Badge variant="outline" className="text-xs">
-                            Neutral
-                          </Badge>
-                        )}
+                        ) : null}
                       </div>
                     </td>
                   </tr>
@@ -589,8 +580,20 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
                   difference between exchanges
                 </p>
                 <p>
-                  • <strong>High Spread (&gt;10bp)</strong>: Potential arbitrage
-                  opportunity every 8 hours
+                  • <strong>High Spread (&gt;25bp)</strong>: Excellent arbitrage
+                  opportunity - worth the gas costs and complexity
+                </p>
+                <p>
+                  • <strong>Medium Spread (15-25bp)</strong>: Good opportunity
+                  for larger capital or lower-cost execution
+                </p>
+                <p>
+                  • <strong>Low Spread (5-15bp)</strong>: Marginal opportunity -
+                  consider gas costs and slippage
+                </p>
+                <p>
+                  • <strong>Minimal Spread (&lt;5bp)</strong>: Generally not
+                  worth trading due to execution costs
                 </p>
                 <p>
                   • <strong>Strategy</strong>: Go long on the exchange with

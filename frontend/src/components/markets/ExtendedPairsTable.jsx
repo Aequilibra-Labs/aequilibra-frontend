@@ -230,7 +230,7 @@ export function ExtendedPairsTable({ searchQuery = '' }) {
                           }`}
                         >
                           {isPositiveFunding ? '+' : ''}
-                          {pair.fundingRate.toFixed(3)}%
+                          {(pair.fundingRate * 100).toFixed(3)}%
                         </span>
                       ) : (
                         <span className="text-muted-foreground font-medium">

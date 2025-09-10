@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,13 @@ import { useExtendedMarkets } from '@/lib/extendedAPI';
 export function ComparisonPairsTable({ searchQuery = '' }) {
   const [sortBy, setSortBy] = useState('volume24hDiff');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [isHydrated, setIsHydrated] = useState(false);
   const router = useRouter();
+
+  // Prevent hydration mismatch by only rendering after client hydration
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   // Handler to navigate to asset page
   const handleViewAsset = (assetName) => {
@@ -186,7 +192,8 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
 
   const loading = hlLoading || exLoading;
 
-  if (loading) {
+  // Prevent hydration mismatch - show loading during SSR and initial hydration
+  if (!isHydrated || loading) {
     return (
       <Card className="shadow-lg border-0 bg-card/50 backdrop-blur">
         <div className="p-8">
@@ -388,7 +395,7 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
                           >
                             {pair.ex.fundingRate !== null
                               ? `${pair.ex.fundingRate > 0 ? '+' : ''}${(
-                                  pair.ex.fundingRate || 0
+                                  (pair.ex.fundingRate || 0) * 100
                                 ).toFixed(3)}%`
                               : 'N/A'}
                           </span>
@@ -417,7 +424,7 @@ export function ComparisonPairsTable({ searchQuery = '' }) {
                         >
                           View {pair.base}
                         </Button>
-                        
+
                         {/* Exchange Trading Buttons */}
                         <div className="flex items-center gap-2">
                           <Button

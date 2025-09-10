@@ -230,7 +230,7 @@ export function ExtendedFundingTable({ searchQuery = '' }) {
                         )}
                         <span>
                           {isPositiveRate ? '+' : ''}
-                          {(item.fundingRate || 0).toFixed(4)}%
+                          {((item.fundingRate || 0) * 100).toFixed(4)}%
                         </span>
                       </div>
                     </td>
@@ -244,7 +244,7 @@ export function ExtendedFundingTable({ searchQuery = '' }) {
                         }`}
                       >
                         {isPositivePredicted ? '+' : ''}
-                        {(item.predictedFundingRate || 0).toFixed(4)}%
+                        {((item.predictedFundingRate || 0) * 100).toFixed(4)}%
                       </span>
                     </td>
 
@@ -255,7 +255,7 @@ export function ExtendedFundingTable({ searchQuery = '' }) {
                         }`}
                       >
                         {isPositiveDaily ? '+' : ''}
-                        {(item.dailyFundingRate || 0).toFixed(2)}%
+                        {((item.dailyFundingRate || 0) * 100).toFixed(2)}%
                       </span>
                     </td>
 
