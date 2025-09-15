@@ -15,6 +15,7 @@ import SlippageInput from '@/components/trade/SlippageInput';
 import ReduceOnlyToggle from '@/components/trade/ReduceOnlyToggle';
 import CloidInput from '@/components/trade/CloidInput';
 import LeveragePanel from '@/components/trade/LeveragePanel';
+import OpenOrdersTable from '@/components/trade/OpenOrdersTable';
 
 const DEFAULT_AGENT_NAME = 'aeq-agent';
 
@@ -146,6 +147,26 @@ export default function TradePage() {
 
   useEffect(() => { refreshPositions(); }, [refreshPositions]);
 
+  // ---------------- User State (for open orders) ----------------
+  const [userState, setUserState] = useState(null);
+  const [userStateBusy, setUserStateBusy] = useState(false);
+  const [userStateErr, setUserStateErr] = useState(null);
+
+  const refreshUserState = useCallback(async () => {
+    if (!connectedAndAuthed || !owner) { setUserState(null); return; }
+    try {
+      setUserStateBusy(true); setUserStateErr(null);
+      const r = await fetch(`${API.state}?owner=${owner}&agent_name=${agentName || DEFAULT_AGENT_NAME}`, { cache: 'no-store' });
+      if (!r.ok) throw new Error(`user state ${r.status}`);
+      const j = await r.json();
+      setUserState(j);
+    } catch (e) {
+      setUserStateErr(String(e?.message || e)); setUserState(null);
+    } finally { setUserStateBusy(false); }
+  }, [connectedAndAuthed, owner, agentName]);
+
+  useEffect(() => { refreshUserState(); }, [refreshUserState]);
+
   // Persistence
   useEffect(() => {
     try {
@@ -197,7 +218,7 @@ export default function TradePage() {
       agent_name: (agentName || DEFAULT_AGENT_NAME).trim() || DEFAULT_AGENT_NAME,
       coin: (coin || '').trim(),
       is_buy: Boolean(isBuy),
-      order_type: orderType === 'limit' ? 'limit' : 'market',
+      order_kind: orderType === 'limit' ? 'limit' : 'market',
       size: safeFloat(size),
       reduce_only: Boolean(reduceOnly),
     };
@@ -256,6 +277,7 @@ export default function TradePage() {
       if (!r.ok) throw new Error((data && (data.detail || data.message)) || r.statusText || 'Failed');
       setResp({ status: r.status, data });
       await refreshPositions();
+      await refreshUserState();
       await fetchActiveAssetData();
     } catch (e) { setErr(e.message || 'Order failed'); }
     finally { setSubmitting(false); }
@@ -278,6 +300,7 @@ export default function TradePage() {
       setLevMsg({ ok: true });
       await fetchActiveAssetData();
       await refreshPositions();
+      await refreshUserState();
     } catch (e) { setLevMsg({ ok: false, err: String(e?.message || e) }); }
     finally { setLevBusy(false); }
   }
@@ -300,6 +323,7 @@ export default function TradePage() {
       }
       await fetchActiveAssetData();
       await refreshPositions();
+      await refreshUserState();
       return true;
     } catch (e) {
       console.error('applyPositionLeverage', e);
@@ -317,6 +341,7 @@ export default function TradePage() {
       }
       await fetchActiveAssetData();
       await refreshPositions();
+      await refreshUserState();
     } catch (e) {
       console.error('closePosition', e);
     }
@@ -449,6 +474,27 @@ export default function TradePage() {
                     ))}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Open Orders */}
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium">Open Orders</div>
+                  {userStateBusy ? <div className="text-xs text-muted-foreground">refreshing…</div> : null}
+                </div>
+                {userStateErr ? <div className="text-xs text-red-600">{userStateErr}</div> : null}
+                <OpenOrdersTable 
+                  owner={owner}
+                  agentName={agentName}
+                  userState={userState}
+                  onAfterChange={async () => {
+                    await refreshUserState();
+                    await refreshPositions();
+                    await fetchActiveAssetData();
+                  }}
+                />
               </CardContent>
             </Card>
           </div>
