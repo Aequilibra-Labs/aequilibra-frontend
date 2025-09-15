@@ -16,8 +16,8 @@ const DEFAULT_AGENT_NAME = 'aeq-agent';
 const DEFAULT_TTL_SECONDS = 180 * 24 * 60 * 60; // 180 days
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
-const EXTENDED_INDEX = 5;                       // required subaccount index
-const EXTENDED_NAME  = 'aeq_test trading key';  // required subaccount name/description
+const EXTENDED_INDEX = 7;                       // required subaccount index
+const EXTENDED_NAME  = 'aeq_elioM trading key';  // required subaccount name/description
 
 /* --------------------------- SIWE helpers ----------------------------- */
 function buildSiweMessage({ address, nonce, chainId, domain, uri }) {
