@@ -14,7 +14,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useHyperliquidMarkets } from '@/lib/hyperliquidAPI';
-import { useExtendedMarkets } from '@/lib/extendedAPI';
+import { useExtendedMarkets } from '@/lib/protocols/extended/rest';
 
 export function ComparisonPairsTable({ searchQuery = '' }) {
   const [sortBy, setSortBy] = useState('volume24hDiff');

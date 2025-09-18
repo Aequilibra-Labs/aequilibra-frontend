@@ -14,7 +14,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useHyperliquidFunding } from '@/lib/hyperliquidAPI';
-import { useExtendedFunding } from '@/lib/extendedAPI';
+import { useExtendedFunding } from '@/lib/protocols/extended/rest';
 import {
   calculateDeltaNeutralAPY,
   getFundingDifferentialBPS,
