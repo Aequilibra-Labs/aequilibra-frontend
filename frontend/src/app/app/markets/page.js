@@ -7,8 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Search, BarChart3 } from 'lucide-react';
 import { PairsTable } from '@/components/markets/PairsTable';
 import FundingTable from '@/components/markets/FundingTable';
-import { ExtendedPairsTable } from '@/components/markets/ExtendedPairsTable';
-import { ExtendedFundingTable } from '@/components/markets/ExtendedFundingTable';
+import { ExtendedPairsTable } from '@/components/protocols/extended/ExtendedPairsTable.jsx';
+import { ExtendedFundingTable } from '@/components/protocols/extended/ExtendedFundingTable.jsx';
 import { ComparisonPairsTable } from '@/components/markets/ComparisonPairsTable';
 import { ComparisonFundingTable } from '@/components/markets/ComparisonFundingTable';
 
