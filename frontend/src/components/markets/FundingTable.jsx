@@ -17,7 +17,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useHyperliquidFunding } from '@/lib/hyperliquidAPI';
+import { useHyperliquidFunding } from '@/hooks/protocols/hyperliquid';
 
 export default function FundingTable({ searchQuery = '' }) {
   const { data: fundingData, loading, error } = useHyperliquidFunding();

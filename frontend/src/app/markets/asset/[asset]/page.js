@@ -23,7 +23,7 @@ import {
 import {
   useHyperliquidFunding,
   useHyperliquidMarkets,
-} from '@/lib/hyperliquidAPI';
+} from '@/hooks/protocols/hyperliquid';
 import { useExtendedFunding, useExtendedMarkets } from '@/lib/protocols/extended/rest';
 import { calculateDeltaNeutralAPY, debugRates } from '@/lib/apyCalculations';
 import SpreadHistoryChart from '@/components/charts/SpreadHistoryChart';

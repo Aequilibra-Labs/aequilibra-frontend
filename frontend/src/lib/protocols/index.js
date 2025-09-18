@@ -18,7 +18,7 @@ export const PROTOCOLS = {
   hyperliquid: {
     config: HYPERLIQUID_CONFIG,
     service: hyperliquidDataService,
-    enabled: false // Coming soon
+    enabled: true // Now available
   },
   extended: {
     config: EXTENDED_CONFIG,

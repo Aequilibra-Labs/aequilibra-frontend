@@ -13,7 +13,7 @@ import {
   ArrowUpDown,
   ExternalLink,
 } from 'lucide-react';
-import { useHyperliquidMarkets } from '@/lib/hyperliquidAPI';
+import { useHyperliquidMarkets } from '@/hooks/protocols/hyperliquid';
 import { useExtendedMarkets } from '@/lib/protocols/extended/rest';
 
 export function ComparisonPairsTable({ searchQuery = '' }) {
