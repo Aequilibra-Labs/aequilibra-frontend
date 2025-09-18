@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import { getExtendedFundingHistory } from '@/lib/extendedAPI';
+import { getExtendedFundingHistory } from '@/lib/protocols/extended/rest';
 import { HyperliquidAPI } from '@/lib/hyperliquidAPI';
 
 const SpreadHistoryChart = ({ asset, timePeriod = 30 }) => {
