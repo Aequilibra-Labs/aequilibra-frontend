@@ -8,5 +8,6 @@ export async function POST(request) {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
+    bodyAlreadyRead: true, // Flag to indicate body was already read
   });
 }

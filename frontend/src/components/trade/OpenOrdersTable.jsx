@@ -1,21 +1,31 @@
 'use client';
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { X, Clock, TrendingUp, TrendingDown } from 'lucide-react';
 
-export default function OpenOrdersTable({ owner, agentName, userState, onAfterChange }) {
+export default function OpenOrdersTable({ 
+  owner, 
+  agentName, 
+  userState, 
+  onAfterChange,
+  orders = [], 
+  onCancelOrder,
+  onRefresh
+}) {
   const [cancellingOrders, setCancellingOrders] = useState(new Set());
   const [error, setError] = useState(null);
 
-  // Get open orders from userState, with defensive checks for different possible structures
-  // Try all possible field names that Hyperliquid API might use
-  const openOrders = userState?.openOrders || 
-                     userState?.user?.openOrders || 
-                     userState?.orders || 
-                     userState?.data?.openOrders ||
-                     userState?.clearinghouseState?.openOrders ||
-                     userState?.assetPositions?.openOrders ||
-                     [];
+  // Get open orders from userState OR use passed orders prop
+  const openOrders = orders.length > 0 ? orders : (
+    userState?.openOrders || 
+    userState?.user?.openOrders || 
+    userState?.orders || 
+    userState?.data?.openOrders ||
+    userState?.clearinghouseState?.openOrders ||
+    userState?.assetPositions?.openOrders ||
+    []
+  );
 
   // DEBUG: Log the userState to see what we're getting
   console.log('🔍 OpenOrdersTable DEBUG:', {
@@ -23,10 +33,47 @@ export default function OpenOrdersTable({ owner, agentName, userState, onAfterCh
     openOrders,
     hasOpenOrders: openOrders?.length > 0,
     userStateKeys: userState ? Object.keys(userState) : 'null',
+    ordersFromProps: orders,
     fullUserState: JSON.stringify(userState, null, 2)
   });
 
-  const handleCancelOrder = async (order) => {
+  // Format number for display
+  const formatNumber = (num, decimals = 2) => {
+    if (!num) return '0.00';
+    return Number(num).toFixed(decimals);
+  };
+
+  // Handle cancel order - use legacy method or new prop method
+  const handleCancelOrder = async (orderData) => {
+    // New method using onCancelOrder prop
+    if (onCancelOrder) {
+      const orderId = orderData.order?.oid || orderData.oid;
+      setCancellingOrders(prev => new Set(prev).add(orderId));
+      
+      try {
+        await onCancelOrder({
+          coin: orderData.order?.coin || orderData.coin,
+          oid: orderId
+        });
+        
+        if (onRefresh) {
+          onRefresh();
+        }
+      } catch (error) {
+        console.error('Failed to cancel order:', error);
+        setError('Failed to cancel order');
+      } finally {
+        setCancellingOrders(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(orderId);
+          return newSet;
+        });
+      }
+      return;
+    }
+
+    // Legacy method
+    const order = orderData.order || orderData;
     const { coin, oid } = order;
     if (!coin || !oid) {
       setError('Invalid order data');
