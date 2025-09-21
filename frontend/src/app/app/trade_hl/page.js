@@ -22,6 +22,14 @@ import PositionsTable from '@/components/dashboard/PositionsTable';
 
 const DEFAULT_AGENT_NAME = 'aeq-agent';
 
+// Popular trading pairs on Hyperliquid
+const AVAILABLE_MARKETS = [
+  'BTC', 'ETH', 'SOL', 'AVAX', 'BNB', 'ADA', 'XRP', 'DOGE', 'MATIC', 'DOT',
+  'LINK', 'UNI', 'LTC', 'BCH', 'ICP', 'FIL', 'ATOM', 'VET', 'TRX', 'ETC',
+  'ALGO', 'XLM', 'AAVE', 'MANA', 'SAND', 'AXS', 'CRV', 'COMP', 'YFI', 'MKR',
+  'SUSHI', '1INCH', 'BAL', 'REN', 'ZRX', 'SNX', 'KNC', 'LRC', 'STORJ', 'BAT'
+];
+
 // Centralize API routes used by this page
 const API = {
   trade: '/api/trading/hl/orders/open',
@@ -101,6 +109,20 @@ export default function TradePage() {
   useEffect(() => { if (agent?.agent_name) setAgentName(agent.agent_name); }, [agent?.agent_name]);
 
   const [coin, setCoin] = useState('BTC');
+  const [isMarketDropdownOpen, setIsMarketDropdownOpen] = useState(false);
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isMarketDropdownOpen && !event.target.closest('.market-dropdown')) {
+        setIsMarketDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMarketDropdownOpen]);
+  
   const [markPx, setMarkPx] = useState('');
   const [isBuy, setIsBuy] = useState(true);
   const [orderType, setOrderType] = useState('market'); // market | limit | twap
@@ -745,11 +767,40 @@ export default function TradePage() {
                 <div className="grid grid-cols-2 gap-3">
                   <label className="block">
                     <div className="text-muted-foreground">Agent</div>
-                    <input className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={agentName} onChange={(e)=>setAgentName(e.target.value)} />
+                    <input className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm cursor-not-allowed" value={agentName} readOnly disabled />
                   </label>
                   <label className="block">
                     <div className="text-muted-foreground">Market</div>
-                    <input className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={coin} onChange={(e)=>setCoin(e.target.value)} placeholder="BTC" />
+                    <div className="relative market-dropdown">
+                      <button
+                        type="button"
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-left flex items-center justify-between hover:bg-muted/50"
+                        onClick={() => setIsMarketDropdownOpen(!isMarketDropdownOpen)}
+                      >
+                        <span>{coin}</span>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${isMarketDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                      
+                      {isMarketDropdownOpen && (
+                        <div className="absolute top-full mt-1 w-full z-50 bg-background border border-input rounded-md shadow-lg max-h-48 overflow-y-auto">
+                          {AVAILABLE_MARKETS.map((market) => (
+                            <button
+                              key={market}
+                              type="button"
+                              className={`w-full px-3 py-2 text-sm text-left hover:bg-muted/50 ${
+                                coin === market ? 'bg-muted/30 font-medium' : ''
+                              }`}
+                              onClick={() => {
+                                setCoin(market);
+                                setIsMarketDropdownOpen(false);
+                              }}
+                            >
+                              {market}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </label>
                 </div>
               </div>
