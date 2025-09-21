@@ -53,7 +53,7 @@ export default function OpenOrdersTable({
       try {
         await onCancelOrder({
           coin: orderData.order?.coin || orderData.coin,
-          oid: orderId
+          oid: parseInt(orderId, 10)  // Ensure oid is an integer
         });
         
         if (onRefresh) {
@@ -75,13 +75,17 @@ export default function OpenOrdersTable({
     // Legacy method
     const order = orderData.order || orderData;
     const { coin, oid } = order;
+    console.log('Attempting to cancel order (legacy):', { coin, oid, owner, agentName, order });
+    
     if (!coin || !oid) {
       setError('Invalid order data');
+      console.log('Invalid order data:', { coin, oid, order });
       return;
     }
 
     if (!owner) {
       setError('Owner not available');
+      console.log('Owner not available:', owner);
       return;
     }
 
@@ -93,7 +97,7 @@ export default function OpenOrdersTable({
         owner,
         agent_name: agentName || 'aeq-agent',
         coin,
-        oid,
+        oid: parseInt(oid, 10),  // Ensure oid is an integer
       };
 
       const response = await fetch('/api/trading/hl/orders/cancel', {

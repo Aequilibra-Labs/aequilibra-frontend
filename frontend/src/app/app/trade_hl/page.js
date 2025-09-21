@@ -597,6 +597,7 @@ export default function TradePage() {
                       } 
                     }))}
                     owner={owner}
+                    refreshOrders={refreshUserState}  // Add refresh orders callback
                     onPartialClose={async (closeData) => {
                       // Implement partial close functionality
                       console.log('Partial close:', closeData);

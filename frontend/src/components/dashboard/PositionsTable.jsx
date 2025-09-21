@@ -11,6 +11,7 @@ export default function PositionsTable({
   onCancelBracket,
   bracketStates = {},
   refreshBrackets,
+  refreshOrders,  // Add new prop for refreshing open orders
   owner = null  // Add owner prop
 }) {
   const [selectedPosition, setSelectedPosition] = useState(null);
@@ -171,6 +172,28 @@ export default function PositionsTable({
     }
   };
 
+  // Apply SL/TP to existing position
+  async function handleApplyNow({ owner, agentName, coin, slPctStr, tpPctStr, slPx, tpPx }) {
+    const payload = {
+      owner,
+      agent_name: agentName || "aeq-agent",
+      coin,
+      sl_pct: slPctStr !== "" && slPctStr != null ? Number(slPctStr) / 100 : null,
+      tp_pct: tpPctStr !== "" && tpPctStr != null ? Number(tpPctStr) / 100 : null,
+      sl_px: slPx != null && slPx !== "" ? Number(slPx) : null,
+      tp_px: tpPx != null && tpPx !== "" ? Number(tpPx) : null,
+    };
+
+    const res = await fetch("/api/trading/hl/bracket/apply-now", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.detail || "Failed to apply TP/SL");
+    return data;
+  }
+
   // Handle modify bracket
   const handleModifyBracket = async (position) => {
     // Safe extraction of coin with fallback
@@ -186,83 +209,33 @@ export default function PositionsTable({
     }
     
     try {
-      const coin = position?.position?.coin || position?.coin;
-      if (!coin) {
-        console.log('No coin found in position for modify bracket:', position);
-        return;
-      }
+      console.log('Applying SL/TP with form:', bracketForm);
       
-      const positionSize = Math.abs(parseFloat(position?.position?.szi || position?.szi || 0));
-      const currentPrice = parseFloat(position?.markPx || position?.position?.entryPx || position?.entryPx || 0);
-      const isLong = parseFloat(position?.position?.szi || position?.szi || 0) > 0;
-      
-      console.log('Position info:', { coin, positionSize, currentPrice, isLong });
-      
-      // Place Stop Loss order if specified
-      if (bracketForm.sl_pct && parseFloat(bracketForm.sl_pct) > 0) {
-        const slPrice = isLong 
-          ? currentPrice * (1 - parseFloat(bracketForm.sl_pct) / 100)
-          : currentPrice * (1 + parseFloat(bracketForm.sl_pct) / 100);
-          
-        console.log('Placing SL order:', { slPrice, isBuy: !isLong });
-        
-        const slResponse = await fetch('/api/trading/hl/orders/open', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            owner: owner,
-            agent_name: 'aeq-agent',
-            coin: coin,
-            is_buy: !isLong, // Inverse de la position
-            order_type: 'limit',
-            sz: positionSize.toString(),
-            limit_px: slPrice.toString(),
-            reduce_only: true,
-            tif: 'Gtc'
-          }),
-        });
-        
-        if (!slResponse.ok) {
-          console.log('Failed to place SL order');
-          return;
-        }
-      }
-      
-      // Place Take Profit order if specified  
-      if (bracketForm.tp_pct && parseFloat(bracketForm.tp_pct) > 0) {
-        const tpPrice = isLong
-          ? currentPrice * (1 + parseFloat(bracketForm.tp_pct) / 100)
-          : currentPrice * (1 - parseFloat(bracketForm.tp_pct) / 100);
-          
-        console.log('Placing TP order:', { tpPrice, isBuy: !isLong });
-        
-        const tpResponse = await fetch('/api/trading/hl/orders/open', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            owner: owner,
-            agent_name: 'aeq-agent',
-            coin: coin,
-            is_buy: !isLong, // Inverse de la position
-            order_type: 'limit',
-            sz: positionSize.toString(),
-            limit_px: tpPrice.toString(),
-            reduce_only: true,
-            tif: 'Gtc'
-          }),
-        });
-        
-        if (!tpResponse.ok) {
-          console.log('Failed to place TP order');
-          return;
-        }
-      }
+      const result = await handleApplyNow({
+        owner: owner,
+        agentName: 'aeq-agent',
+        coin: coin,
+        slPctStr: bracketForm.sl_pct,
+        tpPctStr: bracketForm.tp_pct,
+        slPx: null,
+        tpPx: null
+      });
 
-      console.log('✅ SL/TP orders placed successfully');
+      console.log('✅ SL/TP applied successfully:', result);
       setEditingBracket(null);
       setBracketForm({ sl_pct: '', tp_pct: '', trailing_pct: '' });
+      
+      // Refresh brackets if callback provided
+      if (refreshBrackets) {
+        refreshBrackets();
+      }
+      
+      // Refresh open orders to show the new TP/SL orders
+      if (refreshOrders) {
+        refreshOrders();
+      }
     } catch (error) {
-      console.log('Error modifying bracket:', error);
+      console.log('Error applying SL/TP:', error);
     }
   };
 
