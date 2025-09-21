@@ -740,7 +740,7 @@ export default function TradePage() {
                 </Button>
                 
                 {showBrackets && (
-                  <div className="border rounded-lg p-3">
+                  <div className="border rounded-lg p-3 max-h-96 overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400">
                     <BracketPanel
                       bracketConfig={bracketConfig}
                       setBracketConfig={setBracketConfig}

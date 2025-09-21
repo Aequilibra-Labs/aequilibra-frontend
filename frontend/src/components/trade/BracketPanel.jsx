@@ -294,57 +294,91 @@ export default function BracketPanel({
               </Button>
             </div>
 
-            {bracketConfig.tp_ladders?.map((ladder, index) => {
-              const isValidSize = validateLadderSize(ladder.fraction);
-              const ladderSize = size * ladder.fraction;
-              
-              return (
-                <div key={index} className="flex items-center gap-2 p-2 border border-border rounded">
-                  <Target className="w-4 h-4 text-muted-foreground" />
-                  <input 
-                    className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    type="number" 
-                    min="0" 
-                    step="0.01"
-                    value={ladder.target_price}
-                    onChange={(e) => updateTpLadder(index, 'target_price', parseFloat(e.target.value) || 0)}
-                    placeholder="Target price"
-                  />
-                  <input 
-                    className={`w-20 rounded-md border px-3 py-2 text-sm ${
-                      isValidSize 
-                        ? 'border-input bg-background' 
-                        : 'border-red-500 bg-red-50 text-red-700'
-                    }`}
-                    type="number" 
-                    min="0" 
-                    max="1" 
-                    step="0.05"
-                    value={ladder.fraction}
-                    onChange={(e) => updateTpLadder(index, 'fraction', parseFloat(e.target.value) || 0)}
-                    placeholder="0.25"
-                  />
-                  <div className="flex flex-col items-end">
-                    <span className={`text-xs ${isValidSize ? 'text-muted-foreground' : 'text-red-600'}`}>
-                      {(ladder.fraction * 100).toFixed(0)}%
-                    </span>
-                    {!isValidSize && (
-                      <span className="text-xs text-red-600">
-                        Pourcentage trop bas
-                      </span>
-                    )}
+            {/* Scrollable container for ladders */}
+            {bracketConfig.tp_ladders?.length > 0 && (
+              <div className="max-h-64 overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400">
+                {bracketConfig.tp_ladders.map((ladder, index) => {
+                  const isValidSize = validateLadderSize(ladder.fraction);
+                  const ladderSize = size * ladder.fraction;
+                  
+                  return (
+                    <div key={index} className="p-3 border border-border rounded bg-muted/30 space-y-2">
+                      {/* Header avec icône et bouton supprimer */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Target className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-xs font-medium text-muted-foreground">
+                            Target #{index + 1}
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeTpLadder(index)}
+                        >
+                          <Minus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      
+                      {/* Prix target */}
+                      <div>
+                        <label className="block text-xs text-muted-foreground mb-1">
+                          Target Price
+                        </label>
+                        <input 
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          type="number" 
+                          min="0" 
+                          step="0.01"
+                          value={ladder.target_price}
+                          onChange={(e) => updateTpLadder(index, 'target_price', parseFloat(e.target.value) || 0)}
+                          placeholder="Enter target price"
+                        />
+                      </div>
+                      
+                      {/* Fraction avec validation */}
+                      <div>
+                        <label className="block text-xs text-muted-foreground mb-1">
+                          Position Fraction
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input 
+                            className={`flex-1 rounded-md border px-3 py-2 text-sm ${
+                              isValidSize 
+                                ? 'border-input bg-background' 
+                                : 'border-red-500 bg-red-50 text-red-700'
+                            }`}
+                            type="number" 
+                            min="0" 
+                            max="1" 
+                            step="0.05"
+                            value={ladder.fraction}
+                            onChange={(e) => updateTpLadder(index, 'fraction', parseFloat(e.target.value) || 0)}
+                            placeholder="0.25"
+                          />
+                          <div className="text-right min-w-12">
+                            <div className={`text-sm font-medium ${isValidSize ? 'text-foreground' : 'text-red-600'}`}>
+                              {(ladder.fraction * 100).toFixed(0)}%
+                            </div>
+                            {!isValidSize && (
+                              <div className="text-xs text-red-600">
+                                Too low
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {bracketConfig.tp_ladders?.length > 2 && (
+                  <div className="text-xs text-center text-muted-foreground py-2 border-t border-border/50">
+                    ↕ Scroll for more targets ({bracketConfig.tp_ladders.length} total)
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeTpLadder(index)}
-                  >
-                    <Minus className="w-4 h-4" />
-                  </Button>
-                </div>
-              );
-            })}
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
