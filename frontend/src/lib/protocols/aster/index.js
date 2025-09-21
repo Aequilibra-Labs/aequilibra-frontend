@@ -12,6 +12,7 @@ export {
   quoteVolume,
   volume,
   fundingRate,
+  fundingRateHistory,
   markPrice,
   indexPrice,
   price,

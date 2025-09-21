@@ -202,6 +202,38 @@ class AsterDataService {
   }
 
   /**
+   * Get historical funding rates for a specific symbol
+   * @param {string} symbol - Trading symbol (e.g., 'BTCUSDT', 'BTC')
+   * @param {number} startTime - Start time in milliseconds (optional)
+   * @param {number} endTime - End time in milliseconds (optional)
+   * @param {number} limit - Number of records to return (default 100, max 1000)
+   * @returns {Promise<Array>} Array of funding rate history objects
+   */
+  async fundingRateHistory(symbol, startTime = null, endTime = null, limit = 100) {
+    try {
+      const formattedSymbol = symbol.includes('USDT') ? symbol : `${symbol}USDT`;
+      
+      const params = { symbol: formattedSymbol, limit };
+      if (startTime) params.startTime = startTime;
+      if (endTime) params.endTime = endTime;
+      
+      const data = await this._fetchWithCache('fundingRate', params);
+      if (!data || !Array.isArray(data)) return [];
+      
+      // Transform the data to include parsed values
+      return data.map(item => ({
+        symbol: item.symbol,
+        fundingRate: parseFloat(item.fundingRate || 0),
+        fundingTime: parseInt(item.fundingTime || 0),
+        timestamp: new Date(parseInt(item.fundingTime || 0))
+      }));
+    } catch (error) {
+      console.error(`Error fetching funding rate history for ${symbol}:`, error);
+      return [];
+    }
+  }
+
+  /**
    * Get mark price for a specific symbol
    * @param {string} symbol - Trading symbol (e.g., 'BTCUSDT', 'BTC')
    * @returns {Promise<number>} Mark price value

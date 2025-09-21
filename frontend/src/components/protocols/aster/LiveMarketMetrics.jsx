@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAsterMarkets, useAsterBatchData } from '@/hooks/protocols/aster';
+import { useAsterMarkets, useAsterBatchData, useAsterFundingHistory } from '@/hooks/protocols/aster';
 import { asterDataService } from '@/lib/protocols/aster';
 
 const LiveMarketMetrics = () => {
   const { markets, loading: marketsLoading } = useAsterMarkets();
   const [selectedSymbols, setSelectedSymbols] = useState(['BTCUSDT', 'ETHUSDT', 'SOLUSDT']);
   const [metricsData, setMetricsData] = useState({});
+  const [fundingIntervals, setFundingIntervals] = useState({});
   const [loading, setLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
 
@@ -77,17 +78,87 @@ const LiveMarketMetrics = () => {
     }
   };
 
+  // Fetch funding intervals for selected symbols
+  const fetchFundingIntervals = async () => {
+    if (!selectedSymbols.length) return;
+
+    try {
+      const intervals = {};
+
+      await Promise.all(
+        selectedSymbols.map(async (symbol) => {
+          try {
+            // Get last 10 funding events to calculate interval
+            const historyData = await asterDataService.fundingRateHistory(symbol, null, null, 10);
+            
+            if (historyData && historyData.length >= 2) {
+              // Calculate interval from consecutive funding times
+              const intervalsMs = [];
+              for (let i = 1; i < historyData.length; i++) {
+                const interval = historyData[i].fundingTime - historyData[i-1].fundingTime;
+                intervalsMs.push(interval);
+              }
+              
+              // Use the most common interval (or average if needed)
+              const avgIntervalMs = intervalsMs.reduce((a, b) => a + b, 0) / intervalsMs.length;
+              const intervalHours = Math.round(avgIntervalMs / (1000 * 60 * 60));
+              
+              intervals[symbol] = {
+                hours: intervalHours,
+                milliseconds: avgIntervalMs,
+                sampleSize: intervalsMs.length
+              };
+            } else {
+              // Fallback to estimated interval
+              intervals[symbol] = {
+                hours: 4, // Default to 4 hours for Aster
+                milliseconds: 4 * 60 * 60 * 1000,
+                sampleSize: 0,
+                estimated: true
+              };
+            }
+          } catch (error) {
+            console.error(`Error fetching funding history for ${symbol}:`, error);
+            intervals[symbol] = {
+              hours: 4, // Default fallback
+              milliseconds: 4 * 60 * 60 * 1000,
+              sampleSize: 0,
+              estimated: true,
+              error: error.message
+            };
+          }
+        })
+      );
+
+      setFundingIntervals(intervals);
+    } catch (error) {
+      console.error('Error fetching funding intervals:', error);
+    }
+  };
+
   // Auto-refresh every 10 seconds
   useEffect(() => {
-    fetchMetrics();
-    const interval = setInterval(fetchMetrics, 10000);
+    const fetchAllData = async () => {
+      await Promise.all([fetchMetrics(), fetchFundingIntervals()]);
+    };
+    
+    fetchAllData();
+    const interval = setInterval(fetchAllData, 10000);
     return () => clearInterval(interval);
   }, [selectedSymbols]);
 
-  // Format funding rate for display
-  const formatFundingRate = (rate) => {
+  // Format funding rate for display (normalized to hourly rate)
+  const formatFundingRate = (rate, symbol) => {
     if (!rate && rate !== 0) return 'N/A';
-    const percentage = (rate * 100).toFixed(4);
+    
+    // For averages or when we don't have interval data, assume 4h interval
+    const intervalData = symbol && symbol !== 'average' ? fundingIntervals[symbol] : null;
+    const intervalHours = intervalData ? intervalData.hours : 4; // Default to 4 hours
+    
+    // If this is already an hourly rate (like in averages), don't divide again
+    const hourlyRate = symbol === 'average' ? rate : rate / intervalHours;
+    
+    const percentage = (hourlyRate * 100).toFixed(4);
     return `${percentage >= 0 ? '+' : ''}${percentage}%`;
   };
 
@@ -138,7 +209,8 @@ const LiveMarketMetrics = () => {
               Live Market Metrics
             </h2>
             <p className="text-muted-foreground">
-              Real-time <span className="text-blue-600 dark:text-blue-400 font-medium">funding rates</span>, 
+              Real-time <span className="text-blue-600 dark:text-blue-400 font-medium">hourly funding rates</span> with 
+              <span className="text-cyan-600 dark:text-cyan-400 font-medium"> calculated intervals</span>, 
               <span className="text-green-600 dark:text-green-400 font-medium"> volume</span>, 
               <span className="text-purple-600 dark:text-purple-400 font-medium"> open interest</span>, and 
               <span className="text-orange-600 dark:text-orange-400 font-medium"> spreads</span>
@@ -209,7 +281,7 @@ const LiveMarketMetrics = () => {
                     Symbol
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Funding Rate
+                    Hourly Funding Rate & Interval
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     24h Volume
@@ -253,12 +325,19 @@ const LiveMarketMetrics = () => {
                       {/* Funding Rate */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className={`font-medium ${getFundingRateColor(data.fundingRate)}`}>
-                          {formatFundingRate(data.fundingRate)}
+                          {formatFundingRate(data.fundingRate, data.symbol)}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          Next: {data.nextFundingTime ? 
-                            Math.round((new Date(data.nextFundingTime) - new Date()) / (1000 * 60)) + 'm' : 
-                            'N/A'}
+                          {fundingIntervals[data.symbol] ? (
+                            <span>
+                              {fundingIntervals[data.symbol].hours}h interval
+                              {fundingIntervals[data.symbol].estimated && (
+                                <span className="text-orange-500 ml-1">(est.)</span>
+                              )}
+                            </span>
+                          ) : (
+                            'Loading interval...'
+                          )}
                         </div>
                       </td>
 
@@ -315,14 +394,18 @@ const LiveMarketMetrics = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Average Funding Rate */}
           <div className="bg-background border border-border rounded-lg p-4 shadow-sm">
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">Avg Funding Rate</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Avg Hourly Funding Rate</h3>
             <div className="text-2xl font-bold text-foreground">
               {(() => {
                 const rates = Object.values(metricsData)
                   .filter(d => !d.error && d.fundingRate !== null)
-                  .map(d => d.fundingRate);
+                  .map(d => {
+                    const intervalData = fundingIntervals[d.symbol];
+                    const intervalHours = intervalData ? intervalData.hours : 4;
+                    return d.fundingRate / intervalHours; // Convert to hourly rate
+                  });
                 const avg = rates.length > 0 ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
-                return formatFundingRate(avg);
+                return formatFundingRate(avg, 'average'); // Use a dummy symbol since we're averaging
               })()}
             </div>
           </div>

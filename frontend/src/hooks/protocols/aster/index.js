@@ -130,39 +130,36 @@ export const useAsterMarkets = () => {
 };
 
 /**
- * Hook for fetching specific metric for multiple symbols
- * @param {string[]} symbols - Array of symbols
- * @param {string} metric - Metric to fetch ('price', 'volume', 'openInterest', etc.)
- * @param {number} refreshInterval - Refresh interval in milliseconds
+ * Hook for fetching Aster Finance funding rate history
+ * @param {string} symbol - Trading symbol
+ * @param {number} startTime - Start time in milliseconds (optional)
+ * @param {number} endTime - End time in milliseconds (optional)
+ * @param {number} limit - Number of records to return (default 100)
  * @returns {Object} { data, loading, error, refetch }
  */
-export const useAsterBatchData = (symbols, metric = 'price', refreshInterval = 10000) => {
-  const [data, setData] = useState({});
+export const useAsterFundingHistory = (symbol, startTime = null, endTime = null, limit = 100) => {
+  const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const fetchData = useCallback(async () => {
-    if (!symbols?.length || !metric) return;
+    if (!symbol) return;
 
     try {
       setError(null);
-      const batchData = await asterDataService.batchData(symbols, metric);
-      setData(batchData);
+      setLoading(true);
+      const historyData = await asterDataService.fundingRateHistory(symbol, startTime, endTime, limit);
+      setData(historyData);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [symbols, metric]);
+  }, [symbol, startTime, endTime, limit]);
 
   useEffect(() => {
     fetchData();
-    
-    if (refreshInterval > 0) {
-      const interval = setInterval(fetchData, refreshInterval);
-      return () => clearInterval(interval);
-    }
-  }, [fetchData, refreshInterval]);
+  }, [fetchData]);
 
   return {
     data,

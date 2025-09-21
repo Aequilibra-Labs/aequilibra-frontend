@@ -26,7 +26,7 @@ export function AppNavBar() {
             </a>
             <a
               className="transition-colors hover:text-foreground/80 text-foreground/60"
-              href="/funding-comparison"
+              href="/app/funding-comparison"
             >
               Funding Rates
             </a>
