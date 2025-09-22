@@ -174,9 +174,21 @@ export const useExtendedFunding = () => {
     try {
       setLoading(true);
       setError(null);
-      const rates = await getExtendedFundingRates();
+      const [rates, markets] = await Promise.all([
+        getExtendedFundingRates(),
+        getExtendedMarkets()
+      ]);
+      // Combine funding rates with market data for volume
+      const combinedRates = rates.map(rate => {
+        const market = markets.find(m => m.name === rate.market || m.symbol === rate.symbol);
+        return {
+          ...rate,
+          volume24h: market?.volume24h || rate.volume24h || 0,
+          openInterest: market?.openInterest || rate.openInterest || 0,
+        };
+      });
       if (mountedRef.current) {
-        setData(rates);
+        setData(combinedRates);
         setLastUpdate(new Date());
       }
     } catch (err) {

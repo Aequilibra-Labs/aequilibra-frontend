@@ -119,6 +119,7 @@ async function handleFundingRates() {
             markPrice: parseFloat(stats.markPrice) || 0,
             indexPrice: parseFloat(stats.indexPrice) || 0,
             openInterest: parseFloat(stats.openInterest) || 0,
+            volume24h: parseFloat(stats.dailyVolume) || 0,
             maxLeverage: parseFloat(market.tradingConfig?.maxLeverage) || 1,
           };
         }) || [];

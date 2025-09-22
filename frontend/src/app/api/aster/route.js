@@ -52,13 +52,7 @@ export async function GET(request) {
     
     console.log('Proxying request to:', url);
     
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Aequilibra-Frontend/1.0'
-      }
-    });
+    const response = await fetch(url);
     
     if (!response.ok) {
       const errorText = await response.text();

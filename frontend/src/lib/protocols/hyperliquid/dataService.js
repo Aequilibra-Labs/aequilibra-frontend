@@ -128,7 +128,8 @@ class HyperliquidDataService {
             coin: asset.name,
             fundingRate: assetCtx.funding,
             markPx: assetCtx.markPx,
-            openInterest: assetCtx.openInterest,
+            openInterest: parseFloat(assetCtx.openInterest) * parseFloat(assetCtx.markPx) || 0,
+            volume24h: parseFloat(assetCtx.dayNtlVlm) || 0,
           });
         }
       });

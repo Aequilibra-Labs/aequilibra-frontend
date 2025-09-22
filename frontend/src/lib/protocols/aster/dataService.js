@@ -202,6 +202,32 @@ class AsterDataService {
   }
 
   /**
+   * Get all funding rates (attempt bulk fetch)
+   * @returns {Promise<Object>} Object with symbol as key and funding rate as value
+   */
+  async getAllFundingRates() {
+    try {
+      // Get all premium index data in one call (no symbol parameter)
+      const data = await this._fetchWithCache('premiumIndex', {}, 'all_premium_index');
+      console.log('Bulk funding data:', data);
+      if (!data || !Array.isArray(data)) return {};
+      
+      // Transform to symbol -> rate mapping
+      const rates = {};
+      data.forEach(item => {
+        if (item.symbol && item.lastFundingRate !== undefined) {
+          const symbol = item.symbol.replace('USDT', '');
+          rates[symbol] = parseFloat(item.lastFundingRate || 0);
+        }
+      });
+      return rates;
+    } catch (error) {
+      console.error('Error fetching all funding rates:', error);
+      return {};
+    }
+  }
+
+  /**
    * Get historical funding rates for a specific symbol
    * @param {string} symbol - Trading symbol (e.g., 'BTCUSDT', 'BTC')
    * @param {number} startTime - Start time in milliseconds (optional)
@@ -499,6 +525,38 @@ class AsterDataService {
   }
 
   /**
+   * Get all market data (attempt bulk fetch)
+   * @returns {Promise<Object>} Object with symbol as key and market data as value
+   */
+  async getAllMarketData() {
+    try {
+      // Try to get all ticker data in one call
+      const tickerData = await this._fetchWithCache('ticker/24hr', {}, 'all_ticker');
+      if (!tickerData || !Array.isArray(tickerData)) return {};
+      
+      // For premium index and open interest, we'd need bulk endpoints
+      // For now, return basic ticker data
+      const marketData = {};
+      tickerData.forEach(ticker => {
+        if (ticker.symbol) {
+          const symbol = ticker.symbol.replace('USDT', '');
+          marketData[symbol] = {
+            symbol: ticker.symbol,
+            price: parseFloat(ticker.lastPrice || 0),
+            volume: parseFloat(ticker.volume || 0),
+            quoteVolume: parseFloat(ticker.quoteVolume || 0),
+            // Note: fundingRate, openInterest, markPrice would need separate bulk calls
+          };
+        }
+      });
+      return marketData;
+    } catch (error) {
+      console.error('Error fetching all market data:', error);
+      return {};
+    }
+  }
+
+  /**
    * Clear cache
    */
   clearCache() {
@@ -526,12 +584,14 @@ export const {
   quoteVolume,
   volume,
   fundingRate,
+  getAllFundingRates,
   markPrice,
   indexPrice,
   price,
   priceChangePercent,
   tradeCount,
   marketData,
+  getAllMarketData,
   batchData,
   orderBook,
   spread,

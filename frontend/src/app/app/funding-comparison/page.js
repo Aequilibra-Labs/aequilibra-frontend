@@ -69,38 +69,61 @@ const asterIntervalCache = new Map();
 
 async function getAsterFundingInterval(symbol) {
   const cacheKey = symbol;
-  if (asterIntervalCache.has(cacheKey)) {
-    return asterIntervalCache.get(cacheKey);
-  }
+  if (asterIntervalCache.has(cacheKey)) return asterIntervalCache.get(cacheKey);
+
+  // Try localStorage cache first
+  try {
+    const stored = JSON.parse(localStorage.getItem('funding:asterIntervals') || '{}');
+    if (stored && stored[cacheKey]) {
+      asterIntervalCache.set(cacheKey, stored[cacheKey]);
+      return stored[cacheKey];
+    }
+  } catch {}
+
+  // Helper: timeout a promise
+  const withTimeout = (p, ms = 5000) =>
+    Promise.race([
+      p,
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms)),
+    ]);
 
   try {
-    // Get last 10 funding events to calculate interval
-    const historyData = await asterDataService.fundingRateHistory(symbol, null, null, 10);
-    
-    if (historyData && historyData.length >= 2) {
-      // Calculate interval from consecutive funding times
-      const intervalsMs = [];
-      for (let i = 1; i < historyData.length; i++) {
-        const interval = historyData[i].fundingTime - historyData[i-1].fundingTime;
-        intervalsMs.push(interval);
-      }
-      
-      if (intervalsMs.length > 0) {
-        const avgIntervalMs = intervalsMs.reduce((a, b) => a + b, 0) / intervalsMs.length;
-        const intervalHours = Math.round(avgIntervalMs / (1000 * 60 * 60));
-        
-        const result = { hours: intervalHours, milliseconds: avgIntervalMs };
-        asterIntervalCache.set(cacheKey, result);
-        return result;
-      }
+    // Ask only for the last 2 events (enough to get cadence)
+    const historyData = await withTimeout(
+      asterDataService.fundingRateHistory(symbol, null, null, 2),
+      5000
+    );
+
+    if (historyData?.length >= 2) {
+      const t0 = historyData[0].fundingTime;
+      const t1 = historyData[1].fundingTime;
+      const intervalMs = Math.abs(t1 - t0);
+      const hours = Math.max(1, Math.round(intervalMs / (1000 * 60 * 60)));
+
+      const result = { hours, milliseconds: intervalMs };
+      asterIntervalCache.set(cacheKey, result);
+
+      // persist in localStorage
+      try {
+        const stored = JSON.parse(localStorage.getItem('funding:asterIntervals') || '{}');
+        stored[cacheKey] = result;
+        localStorage.setItem('funding:asterIntervals', JSON.stringify(stored));
+      } catch {}
+
+      return result;
     }
   } catch (error) {
-    console.warn(`Failed to get funding interval for ${symbol}:`, error);
+    console.warn(`Aster interval ${symbol} failed:`, error);
   }
-  
-  // Fallback to default 4 hours
+
+  // Fallback: 4h
   const fallback = { hours: 4, milliseconds: 4 * 60 * 60 * 1000 };
   asterIntervalCache.set(cacheKey, fallback);
+  try {
+    const stored = JSON.parse(localStorage.getItem('funding:asterIntervals') || '{}');
+    stored[cacheKey] = fallback;
+    localStorage.setItem('funding:asterIntervals', JSON.stringify(stored));
+  } catch {}
   return fallback;
 }
 
@@ -141,6 +164,13 @@ function formatNumber(n) {
 function rateColor(rate) {
   if (rate === null || rate === undefined || isNaN(Number(rate))) return 'text-slate-400 dark:text-slate-500';
   return Number(rate) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
+}
+
+function isFiniteNum(x) { return typeof x === 'number' && isFinite(x); }
+// If OI/Vol are already USD, just return Number(x) or 0.
+function toUsd(x) {
+  const n = Number(x);
+  return isFinite(n) ? n : 0;
 }
 
 // — Page wrapper —
@@ -216,29 +246,67 @@ export function FundingComparison() {
     localStorage.setItem('funding:favorites', JSON.stringify([...favorites]));
   }, [favorites]);
 
-  // Fetch Aster funding intervals
-  useEffect(() => {
-    if (selectedPlatforms.includes('aster') && asterData.data?.length > 0) {
-      const fetchIntervals = async () => {
-        const intervals = new Map();
-        const promises = asterData.data.map(async (item) => {
-          const symbol = (item.asset ?? item.coin ?? '').toString();
-          if (symbol) {
-            try {
-              const interval = await getAsterFundingInterval(symbol);
-              intervals.set(symbol, interval);
-            } catch (error) {
-              console.warn(`Failed to get interval for ${symbol}:`, error);
-              intervals.set(symbol, { hours: 4, milliseconds: 4 * 60 * 60 * 1000 }); // fallback
-            }
-          }
-        });
-        await Promise.all(promises);
-        setAsterIntervals(intervals);
-      };
-      fetchIntervals();
+// Fetch Aster funding intervals progressively with bounded concurrency
+useEffect(() => {
+  if (!(selectedPlatforms.includes('aster') && asterData.data?.length)) return;
+
+  let cancelled = false;
+
+  const symbols = asterData.data
+    .map((item) => (item.asset ?? item.coin ?? '').toString())
+    .filter(Boolean);
+
+  // Seed from localStorage immediately (avoids refetch on reload)
+  try {
+    const stored = JSON.parse(localStorage.getItem('funding:asterIntervals') || '{}');
+    if (stored && typeof stored === 'object') {
+      // Merge into state Map
+      setAsterIntervals(new Map(Object.entries(stored)));
+      // Also prime in-memory cache
+      Object.entries(stored).forEach(([k, v]) => asterIntervalCache.set(k, v));
     }
-  }, [selectedPlatforms, asterData.data]);
+  } catch {}
+
+  // Helper to push each discovered interval into state + storage
+  const pushInterval = (sym, interval) => {
+    if (cancelled) return;
+    setAsterIntervals((prev) => {
+      const next = new Map(prev);
+      next.set(sym, interval);
+      try {
+        const obj = Object.fromEntries(next);
+        localStorage.setItem('funding:asterIntervals', JSON.stringify(obj));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Bounded concurrency (simple worker pool)
+  const CONCURRENCY = 6;
+  let i = 0;
+
+  const worker = async () => {
+    while (!cancelled && i < symbols.length) {
+      const sym = symbols[i++];
+      // Use memory cache if available
+      if (asterIntervalCache.has(sym)) {
+        pushInterval(sym, asterIntervalCache.get(sym));
+        continue;
+      }
+      try {
+        const res = await getAsterFundingInterval(sym);
+        pushInterval(sym, res);
+      } catch {
+        pushInterval(sym, { hours: 4, milliseconds: 4 * 60 * 60 * 1000 });
+      }
+    }
+  };
+
+  // Kick off workers (fire-and-forget; don't await)
+  const workers = Array.from({ length: Math.min(CONCURRENCY, symbols.length) }, worker);
+
+  return () => { cancelled = true; };
+}, [selectedPlatforms, asterData.data]);
 
   // Helper to toggle favorite
   const toggleFavorite = (symbol) => {
@@ -275,8 +343,8 @@ export function FundingComparison() {
           normalized,
           fundingRate: rateNum,
           nextFunding: nextFundingTime(meta.unit),
-          volume24h: Number(item.volume24h ?? 0),
-          openInterest: Number(item.openInterest ?? 0),
+          volume24h: toUsd(item.volume24h),        // ensure number
+          openInterest: platformKey === 'aster' ? toUsd(item.openInterest) * toUsd(item.markPx) : toUsd(item.openInterestUSD || item.openInterest),
           markPx: Number(item.markPx ?? 0),
         });
       });
@@ -309,6 +377,10 @@ export function FundingComparison() {
       g.platforms[r.platform] = {
         fundingRate: r.fundingRate,
         platformName: r.platformName,
+        openInterest: r.openInterest,
+        volume24h: r.volume24h,
+        validOI:  isFiniteNum(r.openInterest)  && r.openInterest  >= 0,
+        validVol: isFiniteNum(r.volume24h) && r.volume24h >= 0,
       };
       g.volume24h = Math.max(g.volume24h, r.volume24h || 0);
       g.openInterest = Math.max(g.openInterest, r.openInterest || 0);
@@ -344,6 +416,9 @@ export function FundingComparison() {
     return out.filter(g => Object.values(g.platforms).filter(p => p.fundingRate !== null).length >= 2);
   }, [combined]);
 
+  // Debug validation
+  console.debug('row check', grouped.map(g => [g.asset, Object.fromEntries(Object.entries(g.platforms).map(([k,v]) => [k, { OI:v.openInterest, Vol:v.volume24h, okOI:v.validOI, okVol:v.validVol }]))]));
+
   // Filter + sort
   const filteredSorted = useMemo(() => {
     let arr = grouped.filter(g => {
@@ -363,6 +438,41 @@ export function FundingComparison() {
       }
     }
 
+    const thrOI  = minOI  === '' ? null : Number(minOI);
+    const thrVol = minVol === '' ? null : Number(minVol);
+
+    if (thrOI !== null || thrVol !== null) {
+      arr = arr.map(g => {
+        // Platforms present in this row & currently selected
+        const toCheck = selectedPlatforms.filter(p => g.platforms[p]);
+
+        // Count platforms that pass BOTH thresholds (when set)
+        const passes = toCheck.filter(pid => {
+          const p = g.platforms[pid];
+          const okOI  = thrOI  === null ? true : (p?.validOI  && p.openInterest >= thrOI);
+          const okVol = thrVol === null ? true : (p?.validVol && p.volume24h  >= thrVol);
+          return okOI && okVol;
+        }).length;
+
+        // annotate for UI (used later)
+        g._passCount = passes;
+        g._checkedCount = toCheck.length;
+        g._meetsTwoForArb = passes >= 2;  // arbitrage viability flag
+        return g;
+      })
+      // Keep the row visible if AT LEAST ONE platform passes
+      .filter(g => (g._passCount ?? 0) >= 1);
+    } else {
+      // No thresholds set — still compute flags for UI consistency
+      arr = arr.map(g => {
+        const toCheck = selectedPlatforms.filter(p => g.platforms[p]);
+        g._checkedCount = toCheck.length;
+        g._passCount = toCheck.length;     // treat as all passing when no thresholds
+        g._meetsTwoForArb = g._passCount >= 2;
+        return g;
+      });
+    }
+
     const dir = sortOrder === 'asc' ? 1 : -1;
     arr.sort((a, b) => {
       const av = sortBy === 'asset' ? a.asset : (a.maxRate ?? Number.NEGATIVE_INFINITY);
@@ -372,7 +482,7 @@ export function FundingComparison() {
     });
 
     return arr;
-  }, [grouped, searchQuery, onlyDiff, onlyFavs, minAprPct, sortBy, sortOrder]);
+  }, [grouped, searchQuery, onlyDiff, onlyFavs, minAprPct, minOI, minVol, sortBy, sortOrder]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredSorted.length / pageSize));
@@ -687,6 +797,11 @@ export function FundingComparison() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="text-[11px]">APR ≥ {minAprPct || 0}%</Badge>
+                        {(minOI !== '' || minVol !== '') && (
+                          <Badge variant="secondary" className="text-[11px] rounded-full">
+                            Row kept if ≥1 passes; arbitrage viable if ≥2
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </CardHeader>
@@ -740,13 +855,29 @@ export function FundingComparison() {
                                   return (
                                     <td key={platformId} className="p-4 text-center">
                                       {g.platforms[platformId] ? (
-                                        <div className={cn(
-                                          'font-mono font-bold text-sm tabular-nums',
-                                          rateColor(v),
-                                          v === rowMax && 'underline decoration-emerald-400 decoration-2 underline-offset-4',
-                                          v === rowMin && 'underline decoration-red-400 decoration-2 underline-offset-4'
-                                        )}>
-                                          {formatPct(v, 4)}
+                                        <div className="space-y-1">
+                                          <div className={cn(
+                                            'font-mono font-bold text-sm tabular-nums',
+                                            rateColor(v),
+                                            v === rowMax && 'underline decoration-emerald-400 decoration-2 underline-offset-4',
+                                            v === rowMin && 'underline decoration-red-400 decoration-2 underline-offset-4'
+                                          )}>
+                                            {formatPct(v, 4)}
+                                          </div>
+
+                                          {/* OI line */}
+                                          <div className="text-[11px] leading-tight">
+                                            {g.platforms[platformId]?.validOI
+                                              ? <span className="text-muted-foreground">OI ${formatNumber(g.platforms[platformId].openInterest)}</span>
+                                              : <span className="text-red-400/80">OI —</span>}
+                                          </div>
+
+                                          {/* Vol line */}
+                                          <div className="text-[11px] leading-tight">
+                                            {g.platforms[platformId]?.validVol
+                                              ? <span className="text-muted-foreground">Vol ${formatNumber(g.platforms[platformId].volume24h)}</span>
+                                              : <span className="text-red-400/80">Vol —</span>}
+                                          </div>
                                         </div>
                                       ) : <div className="text-muted-foreground text-sm font-mono">—</div>}
                                     </td>
@@ -797,6 +928,13 @@ export function FundingComparison() {
                                         <span className="text-muted-foreground text-sm">—</span>
                                       )}
                                     </div>
+                                  </div>
+
+                                  <div className="mt-1 text-[11px] text-muted-foreground">
+                                    {g._passCount}/{g._checkedCount} pass{g._passCount === 1 ? '' : 'es'}
+                                    {!g._meetsTwoForArb && (
+                                      <span className="ml-1 text-amber-400">need ≥2 for arb</span>
+                                    )}
                                   </div>
                                 </td>
                               </tr>
