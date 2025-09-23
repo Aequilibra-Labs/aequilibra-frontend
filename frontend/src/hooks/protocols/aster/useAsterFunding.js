@@ -8,7 +8,7 @@ import { asterDataService } from '@/lib/protocols/aster';
  * @param {number} refreshInterval - Refresh interval in milliseconds
  * @returns {Object} { data, loading, error, refetch }
  */
-export const useAsterFunding = (refreshInterval = 30000) => {
+export const useAsterFunding = (refreshInterval = 0) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -161,5 +161,6 @@ export const useAsterFunding = (refreshInterval = 30000) => {
     loading,
     error,
     lastUpdate,
+    refetch: fetchData
   };
 };

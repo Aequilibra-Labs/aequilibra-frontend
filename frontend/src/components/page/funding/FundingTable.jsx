@@ -21,7 +21,11 @@ export default function FundingTable({
   setPage,
   pageSize,
   totalPages,
-  totalItems
+  totalItems,
+  sortBy,
+  setSortBy,
+  sortOrder,
+  setSortOrder
 }) {
   const FUNDING_MULT = { '1h': 1, '8h': 8, '1d': 24, '1y': 24 * 365 };
   const scaleFunding = (perHour) => {
@@ -31,22 +35,46 @@ export default function FundingTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full">
+      <table className="w-full table-fixed">
         <colgroup>
-          <col style={{ width: '200px' }} />
-          {selectedPlatforms.map(() => <col style={{ width: '120px' }} />)}
-          <col style={{ width: '80px' }} />
-          <col style={{ width: '200px' }} />
+          <col style={{ minWidth: '200px' }} />
+          {selectedPlatforms.map(() => <col style={{ minWidth: '120px' }} />)}
+          <col style={{ minWidth: '80px' }} />
+          <col style={{ minWidth: '200px' }} />
         </colgroup>
         <thead>
           <tr className="border-b bg-muted/30">
-            <th className="text-left p-4 font-semibold sticky left-0 bg-muted/30 z-10">Asset</th>
+            <th 
+              className="text-left p-4 font-semibold sticky left-0 bg-muted/30 z-10 cursor-pointer hover:bg-muted/50"
+              onClick={() => {
+                if (sortBy === 'asset') {
+                  setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                } else {
+                  setSortBy('asset');
+                  setSortOrder('asc');
+                }
+              }}
+            >
+              Asset
+            </th>
             {selectedPlatforms.map(platformId => (
               <th key={platformId} className="text-center p-4 font-semibold">
                 <PlatformHeaderCell platformId={platformId} meta={PLATFORM_META[platformId]} suffix={` · ${fundingUnit}`} />
               </th>
             ))}
-            <th className="text-right p-4 font-semibold">APR</th>
+            <th 
+              className="text-center p-4 font-semibold cursor-pointer hover:bg-muted/50"
+              onClick={() => {
+                if (sortBy === 'maxRate') {
+                  setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                } else {
+                  setSortBy('maxRate');
+                  setSortOrder('desc');
+                }
+              }}
+            >
+              APR
+            </th>
             <th className="text-center p-4 font-semibold">Action</th>
           </tr>
         </thead>
@@ -95,7 +123,7 @@ export default function FundingTable({
                     </td>
                   );
                 })}
-                <td className="p-4 text-right font-semibold text-emerald-500">
+                <td className="p-4 text-center font-semibold text-emerald-500">
                   {g.apr != null ? `${(g.apr * 100).toFixed(1)}%` : '—'}
                 </td>
                 <td className="py-3 px-4 text-center">

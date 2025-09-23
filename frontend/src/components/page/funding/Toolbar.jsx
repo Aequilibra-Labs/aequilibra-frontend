@@ -35,7 +35,8 @@ export default function Toolbar({
   setMinVol,
   maxSpreadBps,
   setMaxSpreadBps,
-  onReset
+  onReset,
+  onRefresh
 }) {
   return (
     <div className="flex items-center justify-between">
@@ -177,7 +178,7 @@ export default function Toolbar({
             />
           </PopoverContent>
         </Popover>
-        <Button variant="outline" size="sm" onClick={() => window.location.reload()} disabled={isLoading}>
+        <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
           <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
           Refresh
         </Button>

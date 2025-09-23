@@ -201,10 +201,9 @@ export const useExtendedFunding = () => {
   useEffect(() => {
     mountedRef.current = true;
     fetchFunding();
-    const interval = setInterval(fetchFunding, 30000);
+    // No automatic refresh - only manual refresh via refetch
     return () => {
       mountedRef.current = false;
-      clearInterval(interval);
     };
   }, [fetchFunding]);
 

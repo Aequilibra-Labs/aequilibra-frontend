@@ -20,7 +20,11 @@ export default function FundingRatesCard({
   handleViewAsset,
   formatPct,
   formatNumber,
-  rateColor
+  rateColor,
+  sortBy,
+  setSortBy,
+  sortOrder,
+  setSortOrder
 }) {
   return (
     <Card className="border-border shadow-lg bg-card/60 backdrop-blur-sm">
@@ -57,6 +61,10 @@ export default function FundingRatesCard({
           pageSize={pageSize}
           totalPages={totalPages}
           totalItems={filteredSorted.length}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          sortOrder={sortOrder}
+          setSortOrder={setSortOrder}
         />
       </CardContent>
     </Card>

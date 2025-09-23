@@ -93,7 +93,7 @@ export const useHyperliquidOrderbook = (coin, nSigFigs = 3, refreshInterval = 10
  * @param {number} refreshInterval - Refresh interval in milliseconds
  * @returns {Object} { data, loading, error, refetch }
  */
-export const useHyperliquidFunding = (refreshInterval = 30000) => {
+export const useHyperliquidFunding = (refreshInterval = 0) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -126,6 +126,7 @@ export const useHyperliquidFunding = (refreshInterval = 30000) => {
     loading,
     error,
     lastUpdate,
+    refetch: fetchData
   };
 };
 

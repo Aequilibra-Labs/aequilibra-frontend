@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 
 export default function PlatformRateCell({ valuePerUnit, isRowMax, isRowMin, oiUsd, volUsd, formatPct, formatNumber, rateColor }) {
   return (
-    <div className="space-y-1">
+    <div className="space-y-1 text-center">
       <div className={cn(
         'font-mono font-bold text-sm tabular-nums',
         rateColor(valuePerUnit),

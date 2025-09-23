@@ -8,6 +8,8 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useHyperliquidFunding } from '@/hooks/protocols/hyperliquid';
 import { useExtendedFunding } from '@/lib/protocols/extended/rest';
 import { useAsterFunding } from '@/hooks/protocols/aster/useAsterFunding';
+import { useLighterFunding } from '@/hooks/protocols/lighter/useLighterFunding';
+import { useParadexFunding } from '@/hooks/protocols/paradex/useParadexFunding';
 
 import { PLATFORM_META, AVAILABLE_PLATFORMS } from '@/lib/page/funding/fundingConstants';
 import {
@@ -91,6 +93,31 @@ export function FundingComparison() {
   const hyperliquidData = useHyperliquidFunding();
   const extendedData = useExtendedFunding();
   const asterData = useAsterFunding();
+  const lighterData = useLighterFunding();
+  const paradexData = useParadexFunding();
+
+  // Refresh handler
+  const handleRefresh = async () => {
+    const refreshPromises = [];
+    
+    if (selectedPlatforms.includes('hyperliquid') && hyperliquidData.refetch) {
+      refreshPromises.push(hyperliquidData.refetch());
+    }
+    if (selectedPlatforms.includes('extended') && extendedData.refetch) {
+      refreshPromises.push(extendedData.refetch());
+    }
+    if (selectedPlatforms.includes('aster') && asterData.refetch) {
+      refreshPromises.push(asterData.refetch());
+    }
+    if (selectedPlatforms.includes('lighter') && lighterData.refetch) {
+      refreshPromises.push(lighterData.refetch());
+    }
+    if (selectedPlatforms.includes('paradex') && paradexData.refetch) {
+      refreshPromises.push(paradexData.refetch());
+    }
+    
+    await Promise.all(refreshPromises);
+  };
 
   const handlePlatformToggle = (platformId) => {
     setSelectedPlatforms(prev => prev.includes(platformId)
@@ -196,6 +223,11 @@ useEffect(() => {
           const interval = asterIntervals.get(asset) || { hours: 4 }; // fallback to 4 hours
           rateNum /= interval.hours;
         }
+        if (platformKey === 'paradex' && rateNum !== null) {
+          // Convert from funding period rate (in decimals) to per hour
+          const periodHours = item.fundingPeriodHours || 8;
+          rateNum /= periodHours;
+        }
         rows.push({
           platform: platformKey,
           platformName: meta.name,
@@ -214,9 +246,11 @@ useEffect(() => {
     if (selectedPlatforms.includes('hyperliquid')) pushFrom(hyperliquidData.data, 'hyperliquid');
     if (selectedPlatforms.includes('extended')) pushFrom(extendedData.data, 'extended');
     if (selectedPlatforms.includes('aster')) pushFrom(asterData.data, 'aster');
+    if (selectedPlatforms.includes('lighter')) pushFrom(lighterData.data, 'lighter');
+    if (selectedPlatforms.includes('paradex')) pushFrom(paradexData.data, 'paradex');
 
     return rows;
-  }, [selectedPlatforms, hyperliquidData.data, extendedData.data, asterData.data, asterIntervals]);
+  }, [selectedPlatforms, hyperliquidData.data, extendedData.data, asterData.data, asterIntervals, lighterData.data, paradexData.data]);
 
   // Group by asset
   const grouped = useMemo(() => {
@@ -359,19 +393,25 @@ useEffect(() => {
     if (hyperliquidData.lastUpdate) times.push(hyperliquidData.lastUpdate);
     if (extendedData.lastUpdate) times.push(extendedData.lastUpdate);
     if (asterData.lastUpdate) times.push(asterData.lastUpdate);
+    if (lighterData.lastUpdate) times.push(lighterData.lastUpdate);
+    if (paradexData.lastUpdate) times.push(paradexData.lastUpdate);
     if (times.length) setLastUpdate(new Date(Math.max(...times.map(t => t.getTime()))));
-  }, [hyperliquidData.lastUpdate, extendedData.lastUpdate, asterData.lastUpdate]);
+  }, [hyperliquidData.lastUpdate, extendedData.lastUpdate, asterData.lastUpdate, lighterData.lastUpdate, paradexData.lastUpdate]);
 
   const isLoading = (
     (selectedPlatforms.includes('hyperliquid') && hyperliquidData.loading) ||
     (selectedPlatforms.includes('extended') && extendedData.loading) ||
-    (selectedPlatforms.includes('aster') && asterData.loading)
+    (selectedPlatforms.includes('aster') && asterData.loading) ||
+    (selectedPlatforms.includes('lighter') && lighterData.loading) ||
+    (selectedPlatforms.includes('paradex') && paradexData.loading)
   );
 
   const hasError = (
     (selectedPlatforms.includes('hyperliquid') && !!hyperliquidData.error) ||
     (selectedPlatforms.includes('extended') && !!extendedData.error) ||
-    (selectedPlatforms.includes('aster') && !!asterData.error)
+    (selectedPlatforms.includes('aster') && !!asterData.error) ||
+    (selectedPlatforms.includes('lighter') && !!lighterData.error) ||
+    (selectedPlatforms.includes('paradex') && !!paradexData.error)
   );
 
   return (
@@ -410,6 +450,7 @@ useEffect(() => {
               maxSpreadBps={maxSpreadBps}
               setMaxSpreadBps={setMaxSpreadBps}
               onReset={() => { setOnlyDiff(true); setOnlyFavs(false); setMinAprPct(''); setMinOI(''); setMinVol(''); setMaxSpreadBps(''); }}
+              onRefresh={handleRefresh}
             />
           </div>
         </div>
@@ -428,6 +469,8 @@ useEffect(() => {
                   hyperliquidData={hyperliquidData}
                   extendedData={extendedData}
                   asterData={asterData}
+                  lighterData={lighterData}
+                  paradexData={paradexData}
                 />
               )}
 
@@ -455,6 +498,10 @@ useEffect(() => {
                   formatPct={formatPct}
                   formatNumber={formatNumber}
                   rateColor={rateColor}
+                  sortBy={sortBy}
+                  setSortBy={setSortBy}
+                  sortOrder={sortOrder}
+                  setSortOrder={setSortOrder}
                 />
               )}
             </div>
