@@ -1,1 +1,0 @@
-export { FundingComparison } from './FundingComparison';

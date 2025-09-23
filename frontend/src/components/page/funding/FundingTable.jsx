@@ -1,0 +1,136 @@
+import { Button } from '@/components/ui/button';
+import { ExternalLink, Star, BarChart3 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import PlatformHeaderCell from './PlatformHeaderCell';
+import PlatformRateCell from './PlatformRateCell';
+import StrategyCell from './StrategyCell';
+import PaginationBar from './PaginationBar';
+
+export default function FundingTable({
+  rows,
+  selectedPlatforms,
+  PLATFORM_META,
+  fundingUnit,
+  favorites,
+  toggleFavorite,
+  handleViewAsset,
+  formatPct,
+  formatNumber,
+  rateColor,
+  page,
+  setPage,
+  pageSize,
+  totalPages,
+  totalItems
+}) {
+  const FUNDING_MULT = { '1h': 1, '8h': 8, '1d': 24, '1y': 24 * 365 };
+  const scaleFunding = (perHour) => {
+    if (perHour == null || isNaN(Number(perHour))) return null;
+    return Number(perHour) * FUNDING_MULT[fundingUnit];
+  };
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <colgroup>
+          <col style={{ width: '200px' }} />
+          {selectedPlatforms.map(() => <col style={{ width: '120px' }} />)}
+          <col style={{ width: '80px' }} />
+          <col style={{ width: '200px' }} />
+        </colgroup>
+        <thead>
+          <tr className="border-b bg-muted/30">
+            <th className="text-left p-4 font-semibold sticky left-0 bg-muted/30 z-10">Asset</th>
+            {selectedPlatforms.map(platformId => (
+              <th key={platformId} className="text-center p-4 font-semibold">
+                <PlatformHeaderCell platformId={platformId} meta={PLATFORM_META[platformId]} suffix={` · ${fundingUnit}`} />
+              </th>
+            ))}
+            <th className="text-right p-4 font-semibold">APR</th>
+            <th className="text-center p-4 font-semibold">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((g) => {
+            const scaledVals = selectedPlatforms
+              .filter(k => g.platforms[k]?.fundingRate != null)
+              .map(k => scaleFunding(g.platforms[k].fundingRate));
+            const rowMax = scaledVals.length ? Math.max(...scaledVals) : null;
+            const rowMin = scaledVals.length ? Math.min(...scaledVals) : null;
+            return (
+              <tr key={g.asset} className="hover:bg-muted/30 transition-all duration-200 border-b border-border h-[56px]">
+                <td className="p-4 sticky left-0 bg-background z-10">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label={`Toggle favorite for ${g.asset}`}
+                      aria-pressed={favorites.has(g.asset)}
+                      onClick={() => toggleFavorite(g.asset)}
+                      className="p-1 rounded hover:bg-muted/40 transition-colors"
+                    >
+                      <Star className={cn(
+                        "h-4 w-4",
+                        favorites.has(g.asset) ? "text-amber-400 fill-current" : "text-muted-foreground"
+                      )}/>
+                    </button>
+                    <span className="font-semibold text-foreground text-sm block truncate max-w-[12ch] md:max-w-[18ch]" title={g.asset}>{g.asset}</span>
+                  </div>
+                </td>
+                {selectedPlatforms.map(platformId => {
+                  const v = scaleFunding(g.platforms[platformId]?.fundingRate ?? null);
+                  return (
+                    <td key={platformId} className="p-4 text-center">
+                      {g.platforms[platformId] ? (
+                        <PlatformRateCell
+                          valuePerUnit={v}
+                          isRowMax={v === rowMax}
+                          isRowMin={v === rowMin}
+                          oiUsd={g.platforms[platformId].openInterest}
+                          volUsd={g.platforms[platformId].volume24h}
+                          formatPct={formatPct}
+                          formatNumber={formatNumber}
+                          rateColor={rateColor}
+                        />
+                      ) : <div className="text-muted-foreground text-sm font-mono">—</div>}
+                    </td>
+                  );
+                })}
+                <td className="p-4 text-right font-semibold text-emerald-500">
+                  {g.apr != null ? `${(g.apr * 100).toFixed(1)}%` : '—'}
+                </td>
+                <td className="py-3 px-4 text-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => handleViewAsset(g.asset)}
+                  >
+                    <ExternalLink className="h-3 w-3 mr-1" />
+                    View
+                  </Button>
+                  <StrategyCell longPlatform={g.longPlatform} shortPlatform={g.shortPlatform} meta={PLATFORM_META} />
+                  <div className="mt-1 text-[11px] text-muted-foreground">
+                    {g._passCount}/{g._checkedCount} pass{g._passCount === 1 ? '' : 'es'}
+                    {!g._meetsTwoForArb && (
+                      <span className="ml-1 text-amber-400">need ≥2 for arb</span>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {rows.length === 0 && (
+        <div className="text-center py-12 text-muted-foreground">
+          <BarChart3 className="h-8 w-8 mx-auto mb-3 opacity-50" />
+          <p className="text-sm font-medium">No matching assets</p>
+          <p className="text-xs mt-1">Try broadening your search or lowering the bps threshold</p>
+        </div>
+      )}
+      {rows.length > 0 && (
+        <PaginationBar page={page} setPage={setPage} totalPages={totalPages} pageSize={pageSize} totalItems={totalItems} />
+      )}
+    </div>
+  );
+}
