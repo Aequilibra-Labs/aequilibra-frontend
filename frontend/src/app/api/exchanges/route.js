@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+// import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { encryptSecretsForAccount } from '../../../lib/crypto.js';
 
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
 
 const exchangeEnum = z.enum(['extended', 'hyperliquid', 'aster', 'lighter', 'paradex']).transform(val => val.toUpperCase());
 
@@ -17,6 +17,9 @@ const postSchema = z.object({
 });
 
 export async function GET() {
+  // Prisma database temporarily disabled for deployment
+  return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+  
   try {
     const userId = 1; // Stub
     const accounts = await prisma.exchangeAccount.findMany({
@@ -44,6 +47,9 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  // Prisma database temporarily disabled for deployment
+  return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+  
   try {
     const userId = 1; // Stub
     const body = await request.json();

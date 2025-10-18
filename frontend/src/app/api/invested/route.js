@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+// import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
 
 const postSchema = z.object({
   asset: z.string().min(1),
@@ -10,6 +10,9 @@ const postSchema = z.object({
 });
 
 export async function GET() {
+  // Prisma database temporarily disabled for deployment
+  return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+  
   try {
     const userId = 1; // Stub
     const data = await prisma.investedData.findMany({
@@ -35,6 +38,9 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  // Prisma database temporarily disabled for deployment
+  return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+  
   try {
     const userId = 1; // Stub
     const body = await request.json();

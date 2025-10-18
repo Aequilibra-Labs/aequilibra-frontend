@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+// import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { encryptSecretsForAccount, decryptSecretsForAccount } from '../../../../lib/crypto.js';
 
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
 
 const putSchema = z.object({
   agentKey: z.string().min(1).optional(),
@@ -14,6 +14,9 @@ const putSchema = z.object({
 });
 
 export async function PUT(request, { params }) {
+  // Prisma database temporarily disabled for deployment
+  return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+  
   try {
     const userId = 1; // Stub
     const { id } = params;
@@ -83,6 +86,9 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
+  // Prisma database temporarily disabled for deployment
+  return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+  
   try {
     const userId = 1; // Stub
     const { id } = params;
