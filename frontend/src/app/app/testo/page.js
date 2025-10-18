@@ -199,15 +199,11 @@ function ExtendedSection() {
         </Card>
       )}
 
-      {activeTab === 'websocket' && <ExtendedMarketsWebSocketDashboard />}
-      {activeTab === 'funding' && <ExtendedFundingHistoryDashboard marketNames={marketNames} />}
-      {activeTab === 'funding-rates' && <LiveFundingRatesDashboard />}
+      {activeTab === 'websocket' && <div className="p-4 text-gray-500">WebSocket Dashboard - Coming Soon</div>}
+      {activeTab === 'funding' && <div className="p-4 text-gray-500">Funding History Dashboard - Coming Soon</div>}
+      {activeTab === 'funding-rates' && <div className="p-4 text-gray-500">Live Funding Rates Dashboard - Coming Soon</div>}
       {activeTab === 'chart' && (
-        <HistoricalFundingRateChart
-          market={selectedMarket}
-          onMarketChange={setSelectedMarket}
-          availableMarkets={marketNames}
-        />
+        <div className="p-4 text-gray-500">Historical Funding Rate Chart - Coming Soon</div>
       )}
     </div>
   );

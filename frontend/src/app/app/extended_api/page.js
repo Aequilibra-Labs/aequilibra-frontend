@@ -296,7 +296,7 @@ export default function ApiTestPage() {
                 <p className="mt-1">
                   <strong>Equivalent to:</strong> 
                   <code className="bg-blue-100 px-1 rounded text-xs">
-                    curl ... /api/v1/info/markets | jq -r '.data[].name' | sort
+                    curl ... /api/v1/info/markets | jq -r &apos;.data[].name&apos; | sort
                   </code>
                 </p>
               </div>

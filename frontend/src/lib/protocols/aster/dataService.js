@@ -584,6 +584,7 @@ export const {
   quoteVolume,
   volume,
   fundingRate,
+  fundingRateHistory,
   getAllFundingRates,
   markPrice,
   indexPrice,

@@ -1,4 +1,4 @@
-import { proxyJson } from '../../../_config';
+import { proxyJson } from '../../../../_config';
 
 export const dynamic = 'force-dynamic';
 
