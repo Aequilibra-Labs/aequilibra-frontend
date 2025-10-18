@@ -12,7 +12,8 @@ export function AppNavBar() {
             <span className="font-bold text-xl">Aequilibra</span>
           </a>
           <nav className="hidden md:flex items-center gap-6 text-base ml-8">
-            <a
+            {/* Hidden sections for local testing */}
+            {/* <a
               className="transition-colors hover:text-foreground/80 text-foreground/60"
               href="/app"
             >
@@ -23,14 +24,18 @@ export function AppNavBar() {
               href="/app/markets"
             >
               Markets
-            </a>
+            </a> */}
+            
+            {/* Only Funding Rates section visible */}
             <a
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
+              className="transition-colors hover:text-foreground/80 text-foreground"
               href="/app/funding-comparison"
             >
               Funding Rates
             </a>
-            <a
+            
+            {/* Hidden sections for local testing */}
+            {/* <a
               className="transition-colors hover:text-foreground/80 text-foreground/60"
               href="/app/trade"
             >
@@ -53,7 +58,7 @@ export function AppNavBar() {
               href="/app/trade_hl"
             >
               trade_hl
-            </a>
+            </a> */}
           </nav>
         </div>
         <div className="flex items-center space-x-3">

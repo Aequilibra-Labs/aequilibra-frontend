@@ -420,7 +420,7 @@ useEffect(() => {
         <BackgroundShapes />
         {/* Header */}
         <div className="border-b border-border/40 bg-background/95 backdrop-blur-lg supports-[backdrop-filter]:bg-background/80 shadow-sm sticky top-0 z-40">
-          <div className="container mx-auto px-6 py-4">
+          <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
             <Toolbar
               selectedPlatforms={selectedPlatforms}
               setSelectedPlatforms={setSelectedPlatforms}
@@ -455,7 +455,7 @@ useEffect(() => {
           </div>
         </div>
 
-        <div className="container mx-auto px-6 py-6">
+        <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6">
           <div className="grid grid-cols-1 gap-6">
             {/* Main */}
             <div>

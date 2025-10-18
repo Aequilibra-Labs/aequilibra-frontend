@@ -69,7 +69,7 @@ export function Hero() {
         </motion.div>
 
         <motion.h1 
-          className="font-bold text-4xl sm:text-6xl md:text-7xl lg:text-8xl bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-100 dark:to-white bg-clip-text text-transparent leading-tight"
+          className="font-bold text-3xl sm:text-4xl md:text-6xl lg:text-7xl xl:text-8xl bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-100 dark:to-white bg-clip-text text-transparent leading-tight px-2 sm:px-0"
           variants={fadeInUp}
         >
           Find the best funding across perps.{' '}
@@ -84,7 +84,7 @@ export function Hero() {
         </motion.h1>
 
         <motion.p 
-          className="max-w-[42rem] leading-normal text-muted-foreground sm:text-xl sm:leading-8"
+          className="max-w-[42rem] leading-normal text-muted-foreground text-base sm:text-lg md:text-xl sm:leading-8 px-4 sm:px-0"
           variants={fadeInUp}
         >
           Aggregate across DEXes • Compare pairs • Track funding history • Build
@@ -92,31 +92,31 @@ export function Hero() {
         </motion.p>
 
         <motion.div 
-          className="space-x-4"
+          className="flex flex-col sm:flex-row gap-4 sm:gap-4 items-center"
           variants={scaleIn}
         >
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="inline-block"
+            className="w-full sm:w-auto"
           >
-            <Button size="lg" asChild className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300">
-              <a href="/app">Launch App</a>
+            <Button size="lg" asChild className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300">
+              <a href="/app/funding-comparison">Launch App</a>
             </Button>
           </motion.div>
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="inline-block"
+            className="w-full sm:w-auto"
           >
-            <Button variant="outline" size="lg" asChild className="hover:bg-muted/50 transition-colors duration-300">
+            <Button variant="outline" size="lg" asChild className="w-full sm:w-auto hover:bg-muted/50 transition-colors duration-300">
               <a href="/docs">Learn More</a>
             </Button>
           </motion.div>
         </motion.div>
 
         <motion.p 
-          className="text-sm text-muted-foreground max-w-[42rem]"
+          className="text-sm text-muted-foreground max-w-[42rem] px-4 sm:px-0 text-center"
           variants={fadeInUp}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

@@ -122,7 +122,7 @@ export function HowItWorks() {
   ];
 
   return (
-    <section className="w-full px-4 space-y-8 py-12 md:py-16 lg:py-20 bg-muted/30" ref={ref}>
+    <section className="w-full px-2 sm:px-4 space-y-6 sm:space-y-8 py-12 md:py-16 lg:py-20 bg-muted/30" ref={ref}>
       <motion.div 
         className="mx-auto flex max-w-[58rem] flex-col items-center justify-center space-y-4 text-center"
         initial={{ opacity: 0, y: 30 }}
@@ -130,7 +130,7 @@ export function HowItWorks() {
         transition={{ duration: 0.6 }}
       >
         <motion.h2 
-          className="font-bold text-3xl leading-[1.1] sm:text-4xl md:text-5xl bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent"
+          className="font-bold text-2xl sm:text-3xl leading-[1.1] md:text-4xl lg:text-5xl bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent px-4 sm:px-0"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.6, delay: 0.1 }}
@@ -138,7 +138,7 @@ export function HowItWorks() {
           How It Works
         </motion.h2>
         <motion.p 
-          className="max-w-[85%] leading-normal text-muted-foreground sm:text-lg sm:leading-7"
+          className="max-w-[85%] leading-normal text-muted-foreground text-sm sm:text-base md:text-lg sm:leading-7 px-4 sm:px-0"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.6, delay: 0.2 }}
@@ -148,7 +148,7 @@ export function HowItWorks() {
       </motion.div>
       
       <motion.div 
-        className="mx-auto grid justify-center gap-6 sm:grid-cols-2 md:max-w-[64rem] md:grid-cols-4 relative"
+        className="mx-auto grid justify-center gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 max-w-sm sm:max-w-none md:max-w-[64rem] px-4 sm:px-0 relative"
         variants={containerVariants}
         initial="hidden"
         animate={isInView ? "visible" : "hidden"}

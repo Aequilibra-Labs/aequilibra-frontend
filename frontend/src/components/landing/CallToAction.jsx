@@ -49,7 +49,7 @@ export function CallToAction() {
         transition={{ duration: 0.8 }}
       >
         <motion.h2 
-          className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 dark:from-white dark:via-blue-200 dark:to-purple-200 bg-clip-text text-transparent"
+          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 dark:from-white dark:via-blue-200 dark:to-purple-200 bg-clip-text text-transparent px-4 sm:px-0"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.8, delay: 0.2 }}
@@ -58,7 +58,7 @@ export function CallToAction() {
         </motion.h2>
         
         <motion.p 
-          className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
+          className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed px-4 sm:px-0"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.8, delay: 0.4 }}
@@ -79,9 +79,9 @@ export function CallToAction() {
             <Button 
               size="lg" 
               asChild 
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-lg px-8 py-6 shadow-xl hover:shadow-2xl transition-all duration-300"
+              className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-lg px-8 py-6 shadow-xl hover:shadow-2xl transition-all duration-300"
             >
-              <a href="/app">Start Trading Now</a>
+              <a href="/app/funding-comparison">Start Trading Now</a>
             </Button>
           </motion.div>
           
@@ -93,7 +93,7 @@ export function CallToAction() {
               variant="outline" 
               size="lg" 
               asChild 
-              className="text-lg px-8 py-6 hover:bg-muted/50 transition-all duration-300"
+              className="w-full sm:w-auto text-lg px-8 py-6 hover:bg-muted/50 transition-all duration-300"
             >
               <a href="/docs">View Documentation</a>
             </Button>

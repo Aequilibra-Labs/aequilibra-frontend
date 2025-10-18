@@ -119,3 +119,24 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom animations for loading states */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted) / 0.6) 0px,
+    hsl(var(--muted) / 0.8) 40px,
+    hsl(var(--muted) / 0.4) 80px
+  );
+  background-size: 200px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}

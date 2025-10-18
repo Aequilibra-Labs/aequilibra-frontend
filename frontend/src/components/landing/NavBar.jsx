@@ -4,9 +4,11 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { Menu, X } from 'lucide-react';
 
 export function NavBar() {
   const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -15,6 +17,18 @@ export function NavBar() {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    // Close mobile menu on resize to desktop
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   return (
@@ -95,27 +109,86 @@ export function NavBar() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
         >
-          <motion.div
-            whileHover={{ scale: 1.05, rotate: 5 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <ThemeToggle />
-          </motion.div>
-          
-          <motion.div
+          {/* Mobile Menu Button */}
+          <motion.button
+            className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg hover:bg-muted/50 transition-colors"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Button 
-              asChild 
-              size="lg" 
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+            {mobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </motion.button>
+
+          {/* Desktop Controls */}
+          <div className="hidden md:flex items-center space-x-3">
+            <motion.div
+              whileHover={{ scale: 1.05, rotate: 5 }}
+              whileTap={{ scale: 0.95 }}
             >
-              <a href="/app">Launch App</a>
-            </Button>
-          </motion.div>
+              <ThemeToggle />
+            </motion.div>
+            
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Button 
+                asChild 
+                size="lg" 
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <a href="/app/funding-comparison">Launch App</a>
+              </Button>
+            </motion.div>
+          </div>
         </motion.div>
       </div>
+
+      {/* Mobile Menu */}
+      <motion.div
+        className={`md:hidden border-t border-border/40 bg-background/95 backdrop-blur-lg supports-[backdrop-filter]:bg-background/80 ${
+          mobileMenuOpen ? 'block' : 'hidden'
+        }`}
+        initial={{ opacity: 0, height: 0 }}
+        animate={mobileMenuOpen ? { opacity: 1, height: 'auto' } : { opacity: 0, height: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="px-6 py-4 space-y-4">
+          <nav className="space-y-4">
+            <motion.a
+              className="block py-2 text-foreground/80 hover:text-foreground transition-colors"
+              href="/docs"
+              onClick={() => setMobileMenuOpen(false)}
+              whileTap={{ scale: 0.98 }}
+            >
+              Documentation
+            </motion.a>
+            <motion.a
+              className="block py-2 text-foreground/80 hover:text-foreground transition-colors"
+              href="/legal"
+              onClick={() => setMobileMenuOpen(false)}
+              whileTap={{ scale: 0.98 }}
+            >
+              Legal
+            </motion.a>
+          </nav>
+          
+          <div className="flex items-center justify-between pt-4 border-t border-border/20">
+            <ThemeToggle />
+            <Button 
+              asChild 
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <a href="/app/funding-comparison">Launch App</a>
+            </Button>
+          </div>
+        </div>
+      </motion.div>
     </motion.nav>
   );
 }
