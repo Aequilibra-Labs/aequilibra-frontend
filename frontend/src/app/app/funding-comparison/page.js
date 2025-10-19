@@ -53,7 +53,6 @@ export function FundingComparison() {
   // New filter states (UI only for now)
   const [minOI, setMinOI] = useState('');
   const [minVol, setMinVol] = useState('');
-  const [maxSpreadBps, setMaxSpreadBps] = useState('');
 
   // Funding unit state
   const [fundingUnit, setFundingUnit] = useState('1h'); // '1h' | '8h' | '1d' | '1y'
@@ -447,9 +446,7 @@ useEffect(() => {
               setMinOI={setMinOI}
               minVol={minVol}
               setMinVol={setMinVol}
-              maxSpreadBps={maxSpreadBps}
-              setMaxSpreadBps={setMaxSpreadBps}
-              onReset={() => { setOnlyDiff(true); setOnlyFavs(false); setMinAprPct(''); setMinOI(''); setMinVol(''); setMaxSpreadBps(''); }}
+              onReset={() => { setOnlyDiff(true); setOnlyFavs(false); setMinAprPct(''); setMinOI(''); setMinVol(''); }}
               onRefresh={handleRefresh}
             />
           </div>

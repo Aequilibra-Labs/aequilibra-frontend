@@ -23,7 +23,7 @@ export function Providers({ children }) {
               name: 'Aequilibra',
               logo: 'https://aequilibra.vercel.app/pepe.png',
               mode: 'auto', // 'light' | 'dark' | 'auto'
-              theme: 'default', // 'default' | 'base' | 'cyberpunk' | 'hacker'
+              theme: 'base', // 'default' | 'base' | 'cyberpunk' | 'hacker'
             },
             wallet: {
               display: 'modal', // 'modal' | 'classic'

@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Search, RefreshCw, Filter, X, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Filters from './Filters';
-import { ChainSwitcher } from '@/components/wallet/ChainSwitcher';
+import { useState } from 'react';
 
 export default function Toolbar({
   selectedPlatforms,
@@ -34,27 +34,21 @@ export default function Toolbar({
   setMinOI,
   minVol,
   setMinVol,
-  maxSpreadBps,
-  setMaxSpreadBps,
   onReset,
   onRefresh
 }) {
+  const [showFilters, setShowFilters] = useState(false);
+
   return (
-    <div className="space-y-4">
+    <>
+    <div className="space-y-4 p-1">
       {/* Header Section */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-100 dark:to-white bg-clip-text text-transparent">
-                Funding Rate Comparison
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1">Cross-platform perpetual funding rates</p>
-            </div>
-            <div className="hidden sm:block">
-              <ChainSwitcher />
-            </div>
-          </div>
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-100 dark:to-white bg-clip-text text-transparent">
+            Funding Rate Comparison
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Cross-platform perpetual funding rates</p>
         </div>
         
         {/* Status & Page Size - Desktop Only */}
@@ -97,29 +91,71 @@ export default function Toolbar({
             {Object.values(PLATFORM_META).map(p => {
               const active = selectedPlatforms.includes(p.id);
               return (
-                <Button
-                  key={p.id}
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    "h-8 w-8 p-0 rounded-full transition-colors",
-                    active
-                      ? "bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 ring-2 ring-primary"
-                      : "border border-border hover:bg-muted/40"
+                <div key={p.id} className="relative platform-selector group">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "platform-button relative h-10 w-10 p-0 rounded-full transition-all duration-300 ease-out",
+                      active
+                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/40 ring-2 ring-primary ring-offset-2 ring-offset-background scale-110 hover:shadow-xl hover:shadow-primary/50 hover:scale-115"
+                        : "bg-background border-2 border-border hover:border-primary/50 hover:bg-primary/10 shadow-sm opacity-70 hover:opacity-100 hover:scale-105 hover:shadow-lg"
+                    )}
+                    onClick={() => handlePlatformToggle(p.id)}
+                    aria-pressed={active}
+                    aria-label={`${active ? 'Deselect' : 'Select'} ${p.name} platform`}
+                  >
+                    <img 
+                      src={p.image || '/placeholder.svg'} 
+                      alt={p.name} 
+                      className={cn(
+                        "rounded-full object-cover transition-all duration-300 ease-out",
+                        active 
+                          ? "h-8 w-8 brightness-100" 
+                          : "h-7 w-7 grayscale brightness-75 group-hover:grayscale-0 group-hover:brightness-100"
+                      )} 
+                    />
+                  </Button>
+                  
+                  {/* Active indicator with pulse animation */}
+                  {active && (
+                    <div className="absolute -top-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-background shadow-lg flex items-center justify-center animate-pulse">
+                      <div className="h-2 w-2 bg-white rounded-full"></div>
+                    </div>
                   )}
-                  onClick={() => handlePlatformToggle(p.id)}
-                  aria-pressed={active}
-                >
-                  <img src={p.image || '/placeholder.svg'} alt={p.name} className="h-8 w-8 rounded-full object-cover" />
-                </Button>
+                  
+                  {/* Platform name tooltip */}
+                  <div className="platform-tooltip absolute -bottom-10 left-1/2 tooltip-solid px-3 py-2 rounded-md text-xs font-medium whitespace-nowrap z-20 shadow-lg no-backdrop-blur">
+                    <div className="text-popover-foreground">{p.name}</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {active ? 'Click to remove' : 'Click to add'}
+                    </div>
+                    {/* Tooltip arrow */}
+                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-full">
+                      <div className="border-4 border-transparent border-b-border"></div>
+                    </div>
+                  </div>
+                </div>
               );
             })}
-            <Button variant="outline" size="sm" onClick={handleSelectAll} className="text-xs px-2">
-              All
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleClearAll} className="text-xs px-2">
-              None
-            </Button>
+            <div className="flex gap-1 ml-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleSelectAll} 
+                className="text-xs px-3 py-1 h-8 hover:bg-primary hover:text-primary-foreground transition-colors duration-200 shadow-sm hover:shadow-md"
+              >
+                All
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleClearAll} 
+                className="text-xs px-3 py-1 h-8 hover:bg-destructive hover:text-destructive-foreground transition-colors duration-200 shadow-sm hover:shadow-md"
+              >
+                None
+              </Button>
+            </div>
           </div>
 
           {/* Search */}
@@ -130,7 +166,7 @@ export default function Toolbar({
               onChange={(e) => { setQuery(e.target.value); }}
               placeholder="Search assets..."
               aria-label="Search assets"
-              className="pl-10 w-full"
+              className="pl-10 w-full h-10 bg-background border-border text-foreground"
             />
           </div>
         </div>
@@ -138,23 +174,23 @@ export default function Toolbar({
         {/* Funding Unit Selection & Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           {/* Funding Unit Selector */}
-          <div className="flex items-center gap-1 rounded-lg bg-muted/40 p-1">
+          <div className="flex items-center gap-1 rounded-lg bg-accent p-1 border border-border">
             {['1h','8h','1d','1y'].map(u => (
               <Button
                 key={u}
                 size="sm"
                 variant={fundingUnit === u ? 'default' : 'ghost'}
-                className={cn('h-8 px-3 rounded-md text-xs',
-                  fundingUnit === u && 'bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900')}
-                onClick={() => setFundingUnit(u)}
-                aria-pressed={fundingUnit === u}
+                className={cn('h-9 px-3 rounded-md text-sm font-medium transition-all duration-200',
+                  fundingUnit === u 
+                    ? 'bg-primary text-primary-foreground shadow-md' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background'
+                )}
+                onClick={() => { setFundingUnit(u); }}
               >
                 {u}
               </Button>
             ))}
-          </div>
-
-          {/* Mobile Status & Actions */}
+          </div>          {/* Mobile Status & Actions */}
           <div className="flex items-center gap-2 lg:hidden">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               {isLoading ? (
@@ -177,31 +213,54 @@ export default function Toolbar({
           {/* Filter Controls */}
           <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="outline" className="text-xs px-2">{favoritesCount}★</Badge>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" aria-label="Open filters" className="text-xs px-3">
-                  <Filter className="h-4 w-4 mr-1" />
-                  Filters
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80">
-                <Filters
-                  onlyDiff={onlyDiff}
-                  setOnlyDiff={setOnlyDiff}
-                  onlyFavs={onlyFavs}
-                  setOnlyFavs={setOnlyFavs}
-                  minAprPct={minAprPct}
-                  setMinAprPct={setMinAprPct}
-                  minOI={minOI}
-                  setMinOI={setMinOI}
-                  minVol={minVol}
-                  setMinVol={setMinVol}
-                  maxSpreadBps={maxSpreadBps}
-                  setMaxSpreadBps={setMaxSpreadBps}
-                  onReset={onReset}
-                />
-              </PopoverContent>
-            </Popover>
+            
+            {/* Desktop Popover Filter */}
+            <div className="hidden sm:block">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" aria-label="Open filters" className="text-xs px-3 bg-background border border-border hover:bg-accent">
+                    <Filter className="h-4 w-4 mr-1" />
+                    Filters
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 sm:w-96 max-w-[90vw] bg-black border p-0" align="end" side="bottom">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-white">Filter Options</h3>
+                    </div>
+                    <div className="text-white">
+                      <Filters
+                        onlyDiff={onlyDiff}
+                        setOnlyDiff={setOnlyDiff}
+                        onlyFavs={onlyFavs}
+                        setOnlyFavs={setOnlyFavs}
+                        minAprPct={minAprPct}
+                        setMinAprPct={setMinAprPct}
+                        minOI={minOI}
+                        setMinOI={setMinOI}
+                        minVol={minVol}
+                        setMinVol={setMinVol}
+                        onReset={onReset}
+                      />
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Mobile Modal Filter */}
+            <div className="block sm:hidden">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                aria-label="Open filters" 
+                className="text-xs px-3 bg-background border border-border hover:bg-accent"
+                onClick={() => setShowFilters(true)}
+              >
+                <Filter className="h-4 w-4 mr-1" />
+                Filters
+              </Button>
+            </div>
             <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading} className="hidden lg:flex text-xs px-3">
               <RefreshCw className={cn('h-4 w-4 mr-1', isLoading && 'animate-spin')} />
               Refresh
@@ -210,10 +269,10 @@ export default function Toolbar({
         </div>
 
         {/* Active Filters */}
-        {(minOI || minVol || maxSpreadBps || minAprPct !== '' || onlyFavs) && (
+        {(minOI || minVol || minAprPct !== '' || onlyFavs) && (
           <div className="flex items-center gap-2 flex-wrap">
             {minOI && (
-              <Badge variant="secondary" className="text-xs gap-1">
+              <Badge variant="secondary" className="text-xs gap-1 bg-background border border-border">
                 OI ≥ {formatNumber(Number(minOI))}
                 <button onClick={() => setMinOI('')} className="hover:bg-muted rounded-full p-0.5" aria-label="Clear OI filter">
                   <X className="h-3 w-3" />
@@ -221,23 +280,15 @@ export default function Toolbar({
               </Badge>
             )}
             {minVol && (
-              <Badge variant="secondary" className="text-xs gap-1">
+              <Badge variant="secondary" className="text-xs gap-1 bg-background border border-border">
                 Vol ≥ {formatNumber(Number(minVol))}
                 <button onClick={() => setMinVol('')} className="hover:bg-muted rounded-full p-0.5" aria-label="Clear volume filter">
                   <X className="h-3 w-3" />
                 </button>
               </Badge>
             )}
-            {maxSpreadBps && (
-              <Badge variant="secondary" className="text-xs gap-1">
-                Spread ≤ {maxSpreadBps} bps
-                <button onClick={() => setMaxSpreadBps('')} className="hover:bg-muted rounded-full p-0.5" aria-label="Clear spread filter">
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            )}
             {minAprPct !== '' && (
-              <Badge variant="secondary" className="text-xs gap-1">
+              <Badge variant="secondary" className="text-xs gap-1 bg-background border border-border">
                 APR ≥ {minAprPct}%
                 <button onClick={() => setMinAprPct('')} className="hover:bg-muted rounded-full p-0.5" aria-label="Clear Min APR">
                   <X className="h-3 w-3" />
@@ -245,12 +296,57 @@ export default function Toolbar({
               </Badge>
             )}
             {onlyFavs && (
-              <Badge variant="secondary" className="text-xs">Favorites only</Badge>
+              <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border border-primary/20">
+                Favorites only
+              </Badge>
             )}
           </div>
         )}
       </div>
     </div>
+
+    {/* Mobile Modal for Filters - Only shows on mobile */}
+    {showFilters && (
+      <div className="fixed inset-0 z-50 sm:hidden">
+        {/* Solid Backdrop */}
+        <div 
+          className="absolute inset-0 bg-black"
+          onClick={() => setShowFilters(false)}
+        />
+        {/* Modal Content - Full Screen on Mobile */}
+        <div className="relative bg-black w-full h-full overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b bg-black sticky top-0 z-10">
+            <h2 className="text-lg font-semibold text-white">Filter Options</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFilters(false)}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+          {/* Filters Content */}
+          <div className="p-4 pb-safe text-white">
+            <Filters
+              onlyDiff={onlyDiff}
+              setOnlyDiff={setOnlyDiff}
+              onlyFavs={onlyFavs}
+              setOnlyFavs={setOnlyFavs}
+              minAprPct={minAprPct}
+              setMinAprPct={setMinAprPct}
+              minOI={minOI}
+              setMinOI={setMinOI}
+              minVol={minVol}
+              setMinVol={setMinVol}
+              onReset={onReset}
+            />
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
