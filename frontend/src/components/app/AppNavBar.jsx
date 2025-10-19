@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { ConnectWallet } from '@/components/wallet/ConnectWallet';
+import { OnchainWallet } from '@/components/wallet/OnchainWallet';
 import { ChainSwitcher } from '@/components/wallet/ChainSwitcher';
 import { SideMenu } from '@/components/app/SideMenu';
 
@@ -68,7 +68,7 @@ export function AppNavBar() {
             <ChainSwitcher />
             <ThemeToggle />
           </div>
-          <ConnectWallet />
+          <OnchainWallet />
         </div>
       </div>
     </nav>

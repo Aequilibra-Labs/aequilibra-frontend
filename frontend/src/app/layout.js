@@ -1,5 +1,6 @@
-import { Inter, JetBrains_Mono } from 'next/font/google';
+import { Inter, JetBrains_Mono, DM_Sans } from 'next/font/google';
 import { Providers } from '@/components/providers';
+import '@coinbase/onchainkit/styles.css';
 import './globals.css';
 
 const inter = Inter({
@@ -10,6 +11,12 @@ const inter = Inter({
 
 const jetbrainsMono = JetBrains_Mono({
   variable: '--font-jetbrains-mono',
+  subsets: ['latin'],
+  display: 'swap',
+});
+
+const dmSans = DM_Sans({
+  variable: '--font-dm-sans',
   subsets: ['latin'],
   display: 'swap',
 });
@@ -73,7 +80,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} antialiased h-full`}
+        className={`${inter.variable} ${jetbrainsMono.variable} ${dmSans.variable} antialiased h-full`}
       >
         <MiniAppSdk />
         <Providers>{children}</Providers>

@@ -7,6 +7,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
+  --font-dm-sans: var(--font-dm-sans);
   
   /* Base Mini App spacing system (4px base unit) */
   --spacing-1: 0.25rem; /* 4px */
