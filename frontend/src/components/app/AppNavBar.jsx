@@ -36,6 +36,14 @@ export function AppNavBar() {
               Funding Rates
             </a>
             
+            {/* OnchainKit Demo */}
+            <a
+              className="transition-colors hover:text-foreground/80 text-blue-600 font-medium"
+              href="/onchain-demo"
+            >
+              OnchainKit Demo
+            </a>
+            
             {/* Hidden sections for local testing */}
             {/* <a
               className="transition-colors hover:text-foreground/80 text-foreground/60"

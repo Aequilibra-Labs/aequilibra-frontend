@@ -3,7 +3,7 @@
 import {
   Transaction,
   TransactionButton,
-  TransactionSponsorship,
+  TransactionSponsor,
   TransactionStatus,
   TransactionStatusAction,
   TransactionStatusLabel,
@@ -34,7 +34,7 @@ export default function OnchainTransactionDemo({
       onStatus={handleOnStatus}
       {...props}
     >
-      {isSponsored && <TransactionSponsorship />}
+      {isSponsored && <TransactionSponsor />}
       <TransactionButton />
       <TransactionStatus>
         <TransactionStatusLabel />

@@ -17,6 +17,7 @@ export async function GET() {
       "iconUrl": "https://aequilibra.vercel.app/pepe.png",
       "splashImageUrl": "https://aequilibra.vercel.app/pepe.png",
       "splashBackgroundColor": "#000000",
+      "webhookUrl": "https://aequilibra.vercel.app/api/webhook/farcaster",
       "subtitle": "Find the best funding across perps",
       "description": "Aggregate perpetual DEX funding rates. Compare pairs, track history, and build neutral strategies. Access GMX, dYdX, Perpetual Protocol and more.",
       "screenshotUrls": [

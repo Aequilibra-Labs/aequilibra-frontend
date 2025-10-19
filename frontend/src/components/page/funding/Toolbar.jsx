@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Search, RefreshCw, Filter, X, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Filters from './Filters';
+import { ChainSwitcher } from '@/components/wallet/ChainSwitcher';
 
 export default function Toolbar({
   selectedPlatforms,
@@ -43,10 +44,17 @@ export default function Toolbar({
       {/* Header Section */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-100 dark:to-white bg-clip-text text-transparent">
-            Funding Rate Comparison
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Cross-platform perpetual funding rates</p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-100 dark:to-white bg-clip-text text-transparent">
+                Funding Rate Comparison
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">Cross-platform perpetual funding rates</p>
+            </div>
+            <div className="hidden sm:block">
+              <ChainSwitcher />
+            </div>
+          </div>
         </div>
         
         {/* Status & Page Size - Desktop Only */}
