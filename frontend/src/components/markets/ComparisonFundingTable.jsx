@@ -305,126 +305,121 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
         </div>
 
         {/* Mobile Card View */}
-        <div className="lg:hidden space-y-4">
+        <div className="lg:hidden space-y-3">
           {filteredData.map((item) => {
             const fundingDiffAbs = Math.abs(item.fundingDiff);
             const isSignificantDiff = fundingDiffAbs > 25;
+            const isModerateDiff = fundingDiffAbs > 15;
             
             return (
-              <Card key={item.symbol} className="p-4 hover:shadow-md transition-shadow">
-                <div className="space-y-4">
-                  {/* Header */}
+              <Card key={item.symbol} className="p-3 hover:shadow-md transition-shadow border-l-4" 
+                    style={{ borderLeftColor: isSignificantDiff ? 'rgb(239, 68, 68)' : isModerateDiff ? 'rgb(245, 158, 11)' : 'rgb(34, 197, 94)' }}>
+                <div className="space-y-3">
+                  {/* Header with improved layout */}
                   <div className="flex items-center justify-between">
-                    <div className="font-semibold text-lg">{item.base}/USD</div>
-                    {item.isArbitrageOpportunity && (
-                      <Badge variant="destructive" className="text-xs">
-                        Arbitrage
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-base">{item.base}</span>
+                      <span className="text-xs text-muted-foreground font-medium">/USD</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {item.isArbitrageOpportunity && (
+                        <Badge variant="destructive" className="text-xs px-2 py-0.5">
+                          ARB
+                        </Badge>
+                      )}
+                      <Badge 
+                        variant={isSignificantDiff ? "destructive" : isModerateDiff ? "secondary" : "outline"} 
+                        className="text-xs px-2 py-0.5"
+                      >
+                        {(item.fundingDiff || 0).toFixed(0)}bp
                       </Badge>
-                    )}
+                    </div>
                   </div>
 
-                  {/* Rates */}
-                  <div className="space-y-3">
+                  {/* Rates with improved visual hierarchy */}
+                  <div className="bg-muted/20 rounded-lg p-2 space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Hyperliquid</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                        <span className="text-xs font-medium text-muted-foreground">HL</span>
+                      </div>
                       <span
-                        className={`font-mono text-sm font-semibold ${
-                          item.hl.fundingRate > 0 ? 'text-green-600' : 'text-red-600'
+                        className={`font-mono text-sm font-bold ${
+                          item.hl.fundingRate > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                         }`}
                       >
                         {item.hl.fundingRate > 0 ? '+' : ''}
-                        {((item.hl.fundingRate || 0) * 100).toFixed(4)}%
+                        {((item.hl.fundingRate || 0) * 100).toFixed(3)}%
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Extended</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                        <span className="text-xs font-medium text-muted-foreground">EX</span>
+                      </div>
                       <span
-                        className={`font-mono text-sm font-semibold ${
-                          item.ex.fundingRate > 0 ? 'text-green-600' : 'text-red-600'
+                        className={`font-mono text-sm font-bold ${
+                          item.ex.fundingRate > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                         }`}
                       >
                         {item.ex.fundingRate > 0 ? '+' : ''}
-                        {((item.ex.fundingRate || 0) * 100).toFixed(4)}%
+                        {((item.ex.fundingRate || 0) * 100).toFixed(3)}%
                       </span>
                     </div>
                   </div>
 
-                  {/* Rate Difference */}
-                  <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                    <span className="text-sm font-medium">Rate Difference</span>
-                    <div className="text-right">
-                      <div
-                        className={`font-semibold ${
-                          isSignificantDiff ? 'text-red-600' : 'text-green-600'
-                        }`}
-                      >
-                        {item.fundingDiff > 0 ? '+' : ''}
-                        {(item.fundingDiff || 0).toFixed(1)}bp
-                      </div>
-                      {isSignificantDiff && (
-                        <Badge variant="destructive" className="text-xs mt-1">
-                          High Spread
-                        </Badge>
+                  {/* Delta Neutral APY - Prominent Display */}
+                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium text-primary">
+                        Delta Neutral APY ({getTimePeriodLabel()})
+                      </span>
+                      <span className="font-mono font-bold text-primary text-base">
+                        {calculateDeltaNeutralAPY(
+                          Math.abs(item.fundingDiff) / 10000,
+                          timePeriod
+                        ).toFixed(timePeriod === 'hours' ? 2 : 1)}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Strategy - Compact Display */}
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-medium text-muted-foreground">Strategy:</div>
+                    <div className="flex items-center gap-1">
+                      {item.fundingDiff > 0 ? (
+                        <>
+                          <Badge variant="destructive" className="text-xs px-1.5 py-0.5">SHORT EX</Badge>
+                          <span className="text-xs text-muted-foreground">→</span>
+                          <Badge variant="secondary" className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">LONG HL</Badge>
+                        </>
+                      ) : (
+                        <>
+                          <Badge variant="destructive" className="text-xs px-1.5 py-0.5">SHORT HL</Badge>
+                          <span className="text-xs text-muted-foreground">→</span>
+                          <Badge variant="secondary" className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">LONG EX</Badge>
+                        </>
                       )}
                     </div>
                   </div>
 
-                  {/* APY */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Delta Neutral APY</span>
-                    <span className="font-semibold text-primary">
-                      {calculateDeltaNeutralAPY(
-                        Math.abs(item.fundingDiff) / 10000,
-                        timePeriod
-                      ).toFixed(timePeriod === 'hours' ? 4 : 1)}%
-                    </span>
-                  </div>
-
-                  {/* Strategy */}
-                  <div className="space-y-2 p-3 bg-muted/20 rounded-lg">
-                    <div className="text-sm font-medium">Strategy:</div>
-                    {item.fundingDiff > 0 ? (
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 text-xs">
-                            SHORT
-                          </Badge>
-                          <span className="text-xs">Extended</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs">
-                            LONG
-                          </Badge>
-                          <span className="text-xs">Hyperliquid</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 text-xs">
-                            SHORT
-                          </Badge>
-                          <span className="text-xs">Hyperliquid</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs">
-                            LONG
-                          </Badge>
-                          <span className="text-xs">Extended</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
                   {/* Actions */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 pt-1">
                     <Button
                       size="sm"
-                      variant="default"
-                      className="flex-1"
+                      variant="outline"
+                      className="flex-1 h-8 text-xs"
                       onClick={() => handleViewAsset(item.base)}
                     >
                       View {item.base}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="flex-1 h-8 text-xs bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                      onClick={() => handleViewAsset(item.base)}
+                    >
+                      Trade
                     </Button>
                   </div>
                 </div>

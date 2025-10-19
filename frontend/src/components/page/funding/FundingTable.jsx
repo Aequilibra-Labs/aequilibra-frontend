@@ -1,4 +1,6 @@
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { ExternalLink, Star, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import PlatformHeaderCell from './PlatformHeaderCell';
@@ -34,28 +36,114 @@ export default function FundingTable({
   };
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full table-fixed">
-        <colgroup>
-          <col style={{ minWidth: '200px' }} />
-          {selectedPlatforms.map(() => <col style={{ minWidth: '120px' }} />)}
-          <col style={{ minWidth: '80px' }} />
-          <col style={{ minWidth: '200px' }} />
-        </colgroup>
-        <thead>
-          <tr className="border-b bg-muted/30">
-            <th 
-              className="text-left p-4 font-semibold sticky left-0 bg-muted/30 z-10 cursor-pointer hover:bg-muted/50"
-              onClick={() => {
-                if (sortBy === 'asset') {
-                  setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                } else {
-                  setSortBy('asset');
-                  setSortOrder('asc');
-                }
-              }}
-            >
-              Asset
+    <div>
+      {/* Mobile Card View */}
+      <div className="block lg:hidden space-y-3">
+        {rows.map((g) => {
+          const scaledVals = selectedPlatforms
+            .filter(k => g.platforms[k]?.fundingRate != null)
+            .map(k => scaleFunding(g.platforms[k].fundingRate));
+          const rowMax = scaledVals.length ? Math.max(...scaledVals) : null;
+          const rowMin = scaledVals.length ? Math.min(...scaledVals) : null;
+          const aprPercent = g.apr ? (g.apr * 100).toFixed(1) : '0.0';
+          
+          return (
+            <Card key={g.asset} className="p-3 border border-border/50">
+              <div className="space-y-3">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleFavorite(g.asset)}
+                      className="p-1 rounded hover:bg-muted/40 transition-colors"
+                    >
+                      <Star className={cn(
+                        "h-4 w-4",
+                        favorites.has(g.asset) ? "text-amber-500/70 fill-current" : "text-muted-foreground/60"
+                      )}/>
+                    </button>
+                    <span className="font-semibold text-base text-foreground/90">{g.asset}</span>
+                  </div>
+                  <Badge variant="secondary" className="text-xs px-2 py-1 bg-muted/50 text-muted-foreground">
+                    {aprPercent}% APR
+                  </Badge>
+                </div>
+
+                {/* Platform Rates */}
+                <div className="space-y-2">
+                  {selectedPlatforms.map(platformId => {
+                    const platform = g.platforms[platformId];
+                    if (!platform) return null;
+                    
+                    const v = scaleFunding(platform.fundingRate ?? null);
+                    const isShort = platformId === g.shortPlatform;
+                    const isLong = platformId === g.longPlatform;
+                    
+                    return (
+                      <div key={platformId} className="flex items-center justify-between p-2 bg-muted/10 rounded border border-border/30">
+                        <div className="flex items-center gap-2">
+                          <img 
+                            src={PLATFORM_META[platformId]?.image || '/placeholder.svg'} 
+                            alt={PLATFORM_META[platformId]?.name} 
+                            className="h-4 w-4 rounded-full opacity-80"
+                          />
+                          <span className="text-xs font-medium text-foreground/80">{PLATFORM_META[platformId]?.name}</span>
+                          {isShort && <span className="text-xs font-medium text-red-600">SHORT</span>}
+                          {isLong && <span className="text-xs font-medium text-green-600">LONG</span>}
+                        </div>
+                        <div className="text-right">
+                          <div className="font-mono text-sm font-medium text-foreground/85">
+                            {formatPct(v)}
+                          </div>
+                          <div className="text-xs text-muted-foreground/70">
+                            OI: {formatNumber(platform.openInterest)}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Action */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full h-8 text-xs"
+                  onClick={() => handleViewAsset(g.asset)}
+                >
+                  <BarChart3 className="h-3 w-3 mr-1" />
+                  View {g.asset}
+                </Button>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden lg:block overflow-x-auto">
+        <table className="w-full table-fixed">
+          <colgroup>
+            <col style={{ minWidth: '200px' }} />
+            {selectedPlatforms.map(() => <col style={{ minWidth: '120px' }} />)}
+            <col style={{ minWidth: '80px' }} />
+            <col style={{ minWidth: '200px' }} />
+          </colgroup>
+          <thead>
+            <tr className="border-b bg-muted/30">
+              <th 
+                className="text-left p-4 font-semibold sticky left-0 bg-muted/30 z-10 cursor-pointer hover:bg-muted/50"
+                onClick={() => {
+                  if (sortBy === 'asset') {
+                    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                  } else {
+                    setSortBy('asset');
+                    setSortOrder('asc');
+                  }
+                }}
+              >
+                Asset
             </th>
             {selectedPlatforms.map(platformId => (
               <th key={platformId} className="text-center p-4 font-semibold">
@@ -159,6 +247,7 @@ export default function FundingTable({
       {rows.length > 0 && (
         <PaginationBar page={page} setPage={setPage} totalPages={totalPages} pageSize={pageSize} totalItems={totalItems} />
       )}
+      </div>
     </div>
   );
 }
