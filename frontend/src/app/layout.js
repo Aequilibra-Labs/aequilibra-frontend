@@ -49,7 +49,23 @@ export const metadata = {
     index: true,
     follow: true,
   },
+  other: {
+    'fc:miniapp': JSON.stringify({
+      version: "next",
+      imageUrl: "https://aequilibra-40261ou3g-eliomargiottas-projects.vercel.app/og-image.png",
+      button: {
+        title: "Open Aequilibra",
+        action: {
+          type: "launch_miniapp",
+          name: "Aequilibra",
+          url: "https://aequilibra-40261ou3g-eliomargiottas-projects.vercel.app"
+        }
+      }
+    })
+  }
 };
+
+import { MiniAppSdk } from '@/components/MiniAppSdk';
 
 export default function RootLayout({ children }) {
   return (
@@ -57,6 +73,7 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}
       >
+        <MiniAppSdk />
         <Providers>{children}</Providers>
       </body>
     </html>
