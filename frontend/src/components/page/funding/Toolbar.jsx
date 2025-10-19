@@ -38,6 +38,7 @@ export default function Toolbar({
   onRefresh
 }) {
   const [showFilters, setShowFilters] = useState(false);
+  const [showDesktopFilters, setShowDesktopFilters] = useState(false);
 
   return (
     <>
@@ -76,8 +77,8 @@ export default function Toolbar({
           </div>
           <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); }}>
             <SelectTrigger className="w-[120px]"><SelectValue placeholder="Page size" /></SelectTrigger>
-            <SelectContent>
-              {[10,25,50,100].map(n => (<SelectItem key={n} value={String(n)}>{n} / page</SelectItem>))}
+            <SelectContent className="bg-gray-900/95 border-gray-700/50 shadow-lg">
+              {[10,25,50,100].map(n => (<SelectItem key={n} value={String(n)} className="text-white hover:bg-gray-700/50 focus:bg-gray-700/50">{n} / page</SelectItem>))}
             </SelectContent>
           </Select>
         </div>
@@ -125,9 +126,9 @@ export default function Toolbar({
                   )}
                   
                   {/* Platform name tooltip */}
-                  <div className="platform-tooltip absolute -bottom-10 left-1/2 tooltip-solid px-3 py-2 rounded-md text-xs font-medium whitespace-nowrap z-20 shadow-lg no-backdrop-blur">
-                    <div className="text-popover-foreground">{p.name}</div>
-                    <div className="text-xs text-muted-foreground mt-1">
+                  <div className="platform-tooltip absolute -bottom-10 left-1/2 bg-gray-900/95 border border-gray-700/50 px-4 py-2.5 rounded-lg text-xs font-medium whitespace-nowrap z-10 pointer-events-none shadow-lg">
+                    <div className="text-white font-semibold tracking-wide">{p.name}</div>
+                    <div className="text-xs text-gray-300 mt-1 font-light">
                       {active ? 'Click to remove' : 'Click to add'}
                     </div>
                     {/* Tooltip arrow */}
@@ -216,17 +217,17 @@ export default function Toolbar({
             
             {/* Desktop Popover Filter */}
             <div className="hidden sm:block">
-              <Popover>
+              <Popover onOpenChange={setShowDesktopFilters}>
                 <PopoverTrigger asChild>
                   <Button variant="ghost" size="sm" aria-label="Open filters" className="text-xs px-3 bg-background border border-border hover:bg-accent">
                     <Filter className="h-4 w-4 mr-1" />
                     Filters
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 sm:w-96 max-w-[90vw] bg-black border p-0" align="end" side="bottom">
+                <PopoverContent className="w-80 sm:w-96 max-w-[90vw] bg-gray-900/95 border border-gray-700/50 shadow-2xl backdrop-blur-sm p-0 z-50" align="end" side="bottom">
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-white">Filter Options</h3>
+                      <h3 className="text-lg font-semibold tracking-wide text-white">Filter Options</h3>
                     </div>
                     <div className="text-white">
                       <Filters
@@ -308,16 +309,16 @@ export default function Toolbar({
     {/* Mobile Modal for Filters - Only shows on mobile */}
     {showFilters && (
       <div className="fixed inset-0 z-50 sm:hidden">
-        {/* Solid Backdrop */}
+        {/* Blurred Backdrop */}
         <div 
-          className="absolute inset-0 bg-black"
+          className="absolute inset-0 bg-black/70 backdrop-blur-md"
           onClick={() => setShowFilters(false)}
         />
         {/* Modal Content - Full Screen on Mobile */}
-        <div className="relative bg-black w-full h-full overflow-y-auto">
+        <div className="relative bg-gray-900/95 w-full h-full overflow-y-auto">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b bg-black sticky top-0 z-10">
-            <h2 className="text-lg font-semibold text-white">Filter Options</h2>
+          <div className="flex items-center justify-between p-4 border-b border-gray-700/50 bg-gray-900/95 sticky top-0 z-10">
+            <h2 className="text-lg font-semibold tracking-wide text-white">Filter Options</h2>
             <Button
               variant="ghost"
               size="sm"
@@ -344,6 +345,13 @@ export default function Toolbar({
             />
           </div>
         </div>
+      </div>
+    )}
+
+    {/* Desktop Backdrop Blur - Only shows when desktop popover is open */}
+    {showDesktopFilters && (
+      <div className="fixed inset-0 z-40 hidden sm:block pointer-events-none">
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
       </div>
     )}
     </>
