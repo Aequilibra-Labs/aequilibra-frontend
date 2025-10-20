@@ -3,6 +3,8 @@
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
+import { COPY } from '@/lib/copy';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -18,15 +20,13 @@ const staggerContainer = {
   }
 };
 
-const scaleIn = {
-  initial: { opacity: 0, scale: 0.8 },
-  animate: { opacity: 1, scale: 1 },
-  transition: { duration: 0.5 }
-};
-
 export function Hero() {
+  const scrollToExplainers = () => {
+    document.getElementById('explainers')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <section className="relative w-full px-4 space-y-6 pb-8 pt-6 md:pb-12 md:pt-10 lg:py-22 mt-12 overflow-hidden">
+    <section className="relative w-full px-4 pb-8 pt-6 md:pb-12 md:pt-10 lg:py-16 mt-12 overflow-hidden">
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20 pointer-events-none" />
       
@@ -56,106 +56,109 @@ export function Hero() {
         }}
       />
 
-      <motion.div 
-        className="relative mx-auto flex max-w-[58rem] flex-col items-center justify-center space-y-4 text-center"
-        variants={staggerContainer}
-        initial="initial"
-        animate="animate"
-      >
-        <motion.div variants={fadeInUp}>
-          <Badge variant="outline" className="text-sm border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 transition-colors">
-            🚀 Perpetual DEX Funding Aggregator
-          </Badge>
-        </motion.div>
-
-        <motion.h1 
-          className="font-bold text-3xl sm:text-4xl md:text-6xl lg:text-7xl xl:text-8xl bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-100 dark:to-white bg-clip-text text-transparent leading-tight px-2 sm:px-0"
-          variants={fadeInUp}
-        >
-          Find the best funding across perps.{' '}
-          <motion.span 
-            className="text-primary bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.8 }}
+      <div className="relative mx-auto max-w-7xl">
+        <div className="grid lg:grid-cols-12 gap-8 items-center">
+          {/* Content - Left side */}
+          <motion.div 
+            className="lg:col-span-7 space-y-8"
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
           >
-            One dashboard.
-          </motion.span>
-        </motion.h1>
+            <motion.div variants={fadeInUp} className="space-y-6">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">
+                <span className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-100 dark:to-white bg-clip-text text-transparent">
+                  {COPY.hero.headline}
+                </span>
+              </h1>
 
-        <motion.p 
-          className="max-w-[42rem] leading-normal text-muted-foreground text-base sm:text-lg md:text-xl sm:leading-8 px-4 sm:px-0"
-          variants={fadeInUp}
-        >
-          Aggregate across DEXes • Compare pairs • Track funding history • Build
-          neutral strategies
-        </motion.p>
+              <p className="text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-2xl">
+                {COPY.hero.subhead}
+              </p>
 
-        <motion.div 
-          className="flex flex-col sm:flex-row gap-4 sm:gap-4 items-center"
-          variants={scaleIn}
-        >
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="w-full sm:w-auto"
-          >
-            <Button size="lg" asChild className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300">
-              <a href="/app/funding-comparison">Launch App</a>
-            </Button>
+              <div className="flex flex-wrap gap-3">
+                {COPY.hero.microNotes.map((note, i) => (
+                  <Badge key={i} variant="secondary" className="text-sm px-3 py-1 bg-primary/10 text-primary border-primary/20">
+                    {note}
+                  </Badge>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div 
+              variants={fadeInUp}
+              className="flex flex-col sm:flex-row gap-4"
+            >
+              <Button 
+                size="lg" 
+                asChild 
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 min-h-[3rem] px-8"
+              >
+                <Link href="/app/funding-comparison">
+                  {COPY.hero.primaryCTA}
+                </Link>
+              </Button>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                onClick={scrollToExplainers}
+                className="hover:bg-muted/50 transition-colors duration-300 min-h-[3rem] px-8"
+              >
+                {COPY.hero.secondaryCTA}
+              </Button>
+            </motion.div>
           </motion.div>
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="w-full sm:w-auto"
+
+          {/* Visual - Right side */}
+          <motion.div 
+            className="lg:col-span-5"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <Button variant="outline" size="lg" asChild className="w-full sm:w-auto hover:bg-muted/50 transition-colors duration-300">
-              <a href="/docs">Learn More</a>
-            </Button>
+            <div className="relative">
+              <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50 border border-border/50 overflow-hidden">
+                <div className="p-6 h-full flex items-center justify-center">
+                  <div className="text-center space-y-2">
+                    <div className="text-sm text-muted-foreground font-mono">
+                      {COPY.hero.heroImageTitle}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {COPY.hero.heroImageAlt}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Floating elements */}
+              <motion.div
+                className="absolute -top-2 -left-2 w-4 h-4 bg-blue-500/60 rounded-full"
+                animate={{
+                  y: [0, -8, 0],
+                  scale: [1, 1.1, 1]
+                }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+              <motion.div
+                className="absolute -bottom-2 -right-2 w-6 h-6 bg-purple-500/60 rounded-lg"
+                animate={{
+                  y: [0, 8, 0],
+                  rotate: [0, 15, 0]
+                }}
+                transition={{
+                  duration: 6,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+            </div>
           </motion.div>
-        </motion.div>
-
-        <motion.p 
-          className="text-sm text-muted-foreground max-w-[42rem] px-4 sm:px-0 text-center"
-          variants={fadeInUp}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5, duration: 0.6 }}
-        >
-          Crypto derivatives are risky. Nothing here is financial advice. DYOR.
-        </motion.p>
-
-        {/* Floating elements */}
-        <motion.div
-          className="absolute top-20 left-10 opacity-20"
-          animate={{
-            y: [0, -10, 0],
-            rotate: [0, 5, 0]
-          }}
-          transition={{
-            duration: 6,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        >
-          <div className="w-8 h-8 bg-blue-500 rounded-lg" />
-        </motion.div>
-        
-        <motion.div
-          className="absolute top-32 right-16 opacity-20"
-          animate={{
-            y: [0, 15, 0],
-            rotate: [0, -8, 0]
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        >
-          <div className="w-6 h-6 bg-purple-500 rounded-full" />
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </section>
   );
 }

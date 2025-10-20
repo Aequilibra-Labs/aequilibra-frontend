@@ -1,454 +1,229 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useInView } from 'framer-motion';
-import { useRef, useState, useEffect } from 'react';
-import Image from 'next/image';
+import { COPY } from '@/lib/copy';
 
-function formatCurrency(amount) {
-  if (amount >= 1e9) {
-    return `$${(amount / 1e9).toFixed(2)}B`;
-  } else if (amount >= 1e6) {
-    return `$${(amount / 1e6).toFixed(0)}M`;
-  }
-  return `$${amount.toLocaleString()}`;
-}
-
-const staticDexes = [
+// Platform data with logos and colors
+const platforms = [
   {
     name: 'Hyperliquid',
     logo: '/hyprliquid.png',
-    description: 'High-performance perpetual DEX',
-    chains: ['Hyperliquid L1'],
-    status: 'active',
-    apiName: 'Hyperliquid Perps'
+    gradient: 'from-blue-500 to-cyan-400',
+    shadowColor: 'shadow-blue-500/25'
   },
   {
-    name: 'EdgeX',
-    logo: '/edgex.png',
-    description: 'Advanced derivatives platform',
-    chains: ['Arbitrum'],
-    status: 'active',
-    apiName: 'edgeX Perps'
+    name: 'Aster',
+    logo: '/aster.png',
+    gradient: 'from-purple-500 to-pink-400',
+    shadowColor: 'shadow-purple-500/25'
+  },
+  {
+    name: 'Paradex',
+    logo: '/paradex.png',
+    gradient: 'from-orange-500 to-red-400',
+    shadowColor: 'shadow-orange-500/25'
+  },
+  {
+    name: 'Lighter',
+    logo: '/lighter.png',
+    gradient: 'from-green-500 to-emerald-400',
+    shadowColor: 'shadow-green-500/25'
   },
   {
     name: 'Extended',
     logo: '/extended.png',
-    description: 'Innovative derivatives exchange',
-    chains: ['Arbitrum'],
-    status: 'active',
-    apiName: 'Extended'
-  },
-  {
-    name: 'Hibachi',
-    logo: '/hibachi.png',
-    description: 'High-yield perpetual DEX',
-    chains: ['Arbitrum'],
-    status: 'active',
-    apiName: 'Hibachi'
+    gradient: 'from-indigo-500 to-purple-400',
+    shadowColor: 'shadow-indigo-500/25'
   }
-];
-
-const comingSoonDexes = [
-  {
-    name: 'Jupiter Perps',
-    description: 'Solana-based perpetual exchange',
-    chains: ['Solana'],
-    expectedVolume: '$860M+'
-  },
-  {
-    name: 'Drift Trade',
-    description: 'High-yield perpetual DEX',
-    chains: ['Solana'],
-    expectedVolume: '$480M+'
-  },
-  {
-    name: 'Orderly',
-    description: 'Cross-chain orderbook DEX',
-    chains: ['NEAR', 'Ethereum'],
-    expectedVolume: '$440M+'
-  },
-  {
-    name: 'dYdX V4',
-    description: 'Leading derivatives exchange',
-    chains: ['dYdX Chain'],
-    expectedVolume: '$220M+'
-  },
-  {
-    name: 'Paradex',
-    description: 'StarkNet derivatives platform',
-    chains: ['StarkNet'],
-    expectedVolume: '$210M+'
-  }
-];
-
-const chains = [
-  { name: 'Hyperliquid L1', icon: '/hyprliquid.png', color: 'from-blue-400 to-purple-600' },
-  { name: 'Arbitrum', icon: '/chain-icons/arb.svg', color: 'from-blue-500 to-cyan-400' },
-  { name: 'StarkNet', icon: '/chain-icons/eth.svg', color: 'from-purple-500 to-purple-700' },
-  { name: 'dYdX Chain', icon: '/chain-icons/eth.svg', color: 'from-gray-600 to-gray-800' },
-  { name: 'NEAR', icon: '/chain-icons/eth.svg', color: 'from-green-400 to-green-600' },
-  { name: 'Ethereum', icon: '/chain-icons/eth.svg', color: 'from-blue-400 to-blue-600' }
 ];
 
 export function SupportedDexes() {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, threshold: 0.1 });
-  const [dexes, setDexes] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchDexData() {
-      try {
-        // Import the DefiLlamaAPI dynamically to avoid SSR issues
-        const { DefiLlamaAPI } = await import('@/lib/defilamaAPI');
-        const data = await DefiLlamaAPI.getAllProtocolsData();
-        
-        // Map static dex info with live volume data
-        const updatedDexes = staticDexes.map(dex => {
-          const apiData = data.allProtocols.find(protocol => 
-            protocol.name === dex.apiName || protocol.name.includes(dex.name)
-          );
-          
-          return {
-            ...dex,
-            volume24h: apiData ? formatCurrency(apiData.volume24h) : 'N/A',
-            change24h: apiData ? apiData.change24h : 0,
-            rawVolume: apiData ? apiData.volume24h : 0
-          };
-        });
-        
-        // Sort by volume (highest first)
-        updatedDexes.sort((a, b) => b.rawVolume - a.rawVolume);
-        
-        setDexes(updatedDexes);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching DEX data:', err);
-        // Fallback to static data
-        setDexes(staticDexes.map(dex => ({
-          ...dex,
-          volume24h: 'Loading...',
-          change24h: 0,
-          rawVolume: 0
-        })));
-        setLoading(false);
-      }
-    }
-
-    fetchDexData();
-  }, []);
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.05,
-        delayChildren: 0.2
-      }
-    }
-  };
-
-  const cardVariants = {
-    hidden: { opacity: 0, y: 30, scale: 0.9 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: {
-        duration: 0.5,
-        ease: "easeOut"
-      }
-    }
-  };
-
-  const chainVariants = {
-    hidden: { opacity: 0, scale: 0 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: {
-        duration: 0.4,
-        ease: "backOut"
-      }
-    }
-  };
-
   return (
-    <section className="w-full px-4 py-16 md:py-24 bg-muted/30 relative overflow-hidden" ref={ref}>
-      {/* Background animation */}
+    <section className="relative w-full px-4 py-20 lg:py-24 overflow-hidden">
+      {/* Dynamic background with floating elements */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50/50 via-blue-50/30 to-purple-50/50 dark:from-slate-950/50 dark:via-blue-950/30 dark:to-purple-950/50" />
+      
+      {/* Floating background orbs */}
       <motion.div
-        className="absolute inset-0 opacity-30"
-        style={{
-          background: 'radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(147, 51, 234, 0.1) 0%, transparent 50%)'
-        }}
+        className="absolute top-20 left-10 w-72 h-72 bg-blue-400/10 rounded-full blur-3xl"
         animate={{
-          scale: [1, 1.1, 1],
-          opacity: [0.3, 0.5, 0.3]
+          x: [0, 30, -30, 0],
+          y: [0, -40, 40, 0],
+          scale: [1, 1.1, 0.9, 1],
         }}
         transition={{
-          duration: 8,
+          duration: 20,
           repeat: Infinity,
           ease: "easeInOut"
         }}
       />
-
-      <motion.div 
-        className="relative mx-auto max-w-7xl"
-        initial="hidden"
-        animate={isInView ? "visible" : "hidden"}
-        variants={containerVariants}
-      >
-        <motion.div 
-          className="text-center space-y-4 mb-16"
-          variants={cardVariants}
+      <motion.div
+        className="absolute bottom-20 right-10 w-96 h-96 bg-purple-400/10 rounded-full blur-3xl"
+        animate={{
+          x: [0, -40, 40, 0],
+          y: [0, 30, -30, 0],
+          scale: [1, 0.8, 1.2, 1],
+        }}
+        transition={{
+          duration: 25,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+      
+      <div className="relative max-w-7xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+          className="text-center space-y-6 mb-16"
         >
-          <h2 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 dark:from-white dark:via-blue-200 dark:to-purple-200 bg-clip-text text-transparent">
-            Supported Exchanges
+          <h2 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-700 to-purple-700 dark:from-white dark:via-blue-300 dark:to-purple-300 bg-clip-text text-transparent">
+            {COPY.supportedPerps.title}
           </h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Compare funding rates across leading decentralized exchanges with more integrations coming soon
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            {COPY.supportedPerps.note}
           </p>
         </motion.div>
 
-        {/* Supported Chains */}
-        <motion.div 
-          className="mb-12"
-          variants={cardVariants}
-        >
-          <h3 className="text-center text-lg font-semibold mb-6 text-muted-foreground">
-            Multi-Chain Support
-          </h3>
-          <motion.div 
-            className="flex flex-wrap justify-center gap-4"
-            variants={containerVariants}
-          >
-            {chains.map((chain, index) => (
+        {/* Floating platform logos */}
+        <div className="relative h-80 mb-12">
+          {platforms.map((platform, index) => {
+            const positions = [
+              { top: '20%', left: '15%' },
+              { top: '10%', left: '45%' },
+              { top: '25%', left: '75%' },
+              { top: '55%', left: '25%' },
+              { top: '50%', left: '65%' }
+            ];
+            
+            return (
               <motion.div
-                key={chain.name}
-                variants={chainVariants}
-                whileHover={{ 
-                  scale: 1.1,
-                  rotate: [0, -5, 5, 0],
-                  transition: { duration: 0.3 }
+                key={platform.name}
+                className="absolute"
+                style={positions[index]}
+                initial={{ opacity: 0, scale: 0, rotate: -180 }}
+                whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
+                transition={{ 
+                  duration: 0.8, 
+                  delay: index * 0.2,
+                  type: "spring",
+                  stiffness: 100
                 }}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/80 backdrop-blur-sm border border-muted/50 hover:border-muted transition-all duration-300"
-              >
-                <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${chain.color} flex items-center justify-center`}>
-                  <Image 
-                    src={chain.icon} 
-                    alt={chain.name}
-                    width={16}
-                    height={16}
-                    className="w-4 h-4"
-                  />
-                </div>
-                <span className="text-sm font-medium">{chain.name}</span>
-              </motion.div>
-            ))}
-          </motion.div>
-        </motion.div>
-
-        {/* Active DEX Grid */}
-        <motion.div 
-          className="mb-16"
-          variants={cardVariants}
-        >
-          <h3 className="text-center text-xl font-semibold mb-8 text-foreground">
-            🟢 Currently Supported
-          </h3>
-          <motion.div 
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-            variants={containerVariants}
-          >
-            {dexes.map((dex, index) => (
-              <motion.div
-                key={dex.name}
-                variants={cardVariants}
                 whileHover={{ 
-                  y: -5,
-                  scale: 1.02,
+                  scale: 1.1, 
+                  rotate: 5,
                   transition: { duration: 0.2 }
                 }}
-                className="group relative"
+                viewport={{ once: true }}
               >
-                <div className="h-full p-6 rounded-xl bg-background/80 backdrop-blur-sm border-2 border-green-500/30 hover:border-green-500/50 transition-all duration-300 space-y-4">
-                  {/* Status Badge */}
-                  <div className="absolute top-4 right-4">
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 text-green-600 text-xs font-medium">
-                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                      Live
-                    </span>
-                  </div>
-
-                  {/* Logo and Name */}
-                  <div className="flex items-center gap-3">
-                    <motion.div 
-                      className="w-12 h-12 rounded-lg bg-muted/50 flex items-center justify-center overflow-hidden"
-                      whileHover={{ scale: 1.1, rotate: 5 }}
-                      transition={{ duration: 0.2 }}
+                <div className={`relative group cursor-pointer`}>
+                  {/* Glow effect */}
+                  <motion.div
+                    className={`absolute inset-0 bg-gradient-to-r ${platform.gradient} rounded-full blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-300`}
+                    animate={{
+                      scale: [1, 1.2, 1],
+                      opacity: [0.1, 0.2, 0.1]
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  />
+                  
+                  {/* Logo container */}
+                  <motion.div
+                    className={`relative w-20 h-20 lg:w-24 lg:h-24 rounded-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-white/20 ${platform.shadowColor} shadow-lg flex items-center justify-center overflow-hidden`}
+                    animate={{
+                      y: [0, -8, 0],
+                      rotate: [0, 2, -2, 0]
+                    }}
+                    transition={{
+                      duration: 4 + index,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    {/* Logo image with consistent formatting */}
+                    <img 
+                      src={platform.logo} 
+                      alt={`${platform.name} logo`} 
+                      className="h-12 w-12 lg:h-16 lg:w-16 rounded object-contain" 
+                    />
+                    
+                    {/* Platform name on hover */}
+                    <motion.div
+                      className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      initial={{ y: 10 }}
+                      whileHover={{ y: 0 }}
                     >
-                      <Image 
-                        src={dex.logo} 
-                        alt={dex.name}
-                        width={32}
-                        height={32}
-                        className="w-8 h-8 object-contain"
-                      />
-                    </motion.div>
-                    <div>
-                      <h3 className="font-semibold text-foreground group-hover:text-green-600 transition-colors">
-                        {dex.name}
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        {dex.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Volume */}
-                  <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground">24h Volume</div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-lg font-bold bg-gradient-to-r from-green-600 to-green-400 bg-clip-text text-transparent">
-                        {loading ? (
-                          <div className="w-16 h-6 bg-muted animate-pulse rounded"></div>
-                        ) : (
-                          dex.volume24h
-                        )}
+                      <div className="bg-black/80 text-white text-xs px-2 py-1 rounded-md whitespace-nowrap">
+                        {platform.name}
                       </div>
-                      {!loading && dex.change24h > 0 && (
-                        <span className="text-xs text-green-600 font-medium">
-                          +{dex.change24h.toFixed(1)}%
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Supported Chains */}
-                  <div className="space-y-2">
-                    <div className="text-xs text-muted-foreground">Chains</div>
-                    <div className="flex flex-wrap gap-1">
-                      {dex.chains.map((chainName) => (
-                        <span 
-                          key={chainName}
-                          className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-600 font-medium"
-                        >
-                          {chainName}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Hover effect */}
-                  <motion.div
-                    className="absolute inset-0 rounded-xl bg-gradient-to-r from-green-600/10 to-green-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                  />
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </motion.div>
-
-        {/* Coming Soon DEX Grid */}
-        <motion.div 
-          className="mb-12"
-          variants={cardVariants}
-        >
-          <h3 className="text-center text-xl font-semibold mb-8 text-foreground">
-            🚀 Coming Soon
-          </h3>
-          <motion.div 
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-            variants={containerVariants}
-          >
-            {comingSoonDexes.map((dex, index) => (
-              <motion.div
-                key={dex.name}
-                variants={cardVariants}
-                whileHover={{ 
-                  y: -3,
-                  scale: 1.01,
-                  transition: { duration: 0.2 }
-                }}
-                className="group relative"
-              >
-                <div className="h-full p-6 rounded-xl bg-background/60 backdrop-blur-sm border-2 border-dashed border-blue-500/30 hover:border-blue-500/50 transition-all duration-300 space-y-4">
-                  {/* Status Badge */}
-                  <div className="absolute top-4 right-4">
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/10 text-blue-600 text-xs font-medium">
-                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
-                      Soon
-                    </span>
-                  </div>
-
-                  {/* Logo placeholder and Name */}
-                  <div className="flex items-center gap-3">
-                    <motion.div 
-                      className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-600/20 flex items-center justify-center"
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded opacity-60" />
                     </motion.div>
-                    <div>
-                      <h3 className="font-semibold text-foreground group-hover:text-blue-600 transition-colors">
-                        {dex.name}
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        {dex.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Expected Volume */}
-                  <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground">Expected Volume</div>
-                    <div className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                      {dex.expectedVolume}
-                    </div>
-                  </div>
-
-                  {/* Supported Chains */}
-                  <div className="space-y-2">
-                    <div className="text-xs text-muted-foreground">Chains</div>
-                    <div className="flex flex-wrap gap-1">
-                      {dex.chains.map((chainName) => (
-                        <span 
-                          key={chainName}
-                          className="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-600 font-medium"
-                        >
-                          {chainName}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Hover effect */}
-                  <motion.div
-                    className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-600/5 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                  />
+                  </motion.div>
                 </div>
               </motion.div>
-            ))}
-          </motion.div>
-        </motion.div>
-
-        {/* Bottom CTA */}
-        <motion.div 
-          className="text-center mt-12"
-          variants={cardVariants}
-        >
-          <motion.div 
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm border border-muted/50"
-            whileHover={{ scale: 1.02 }}
-            transition={{ duration: 0.2 }}
+            );
+          })}
+          
+          {/* Connecting lines animation */}
+          <svg
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: -1 }}
           >
-            <motion.div 
-              className="w-2 h-2 bg-blue-500 rounded-full"
+            <motion.path
+              d="M 150 100 Q 300 50 450 120 T 650 180"
+              stroke="url(#gradient1)"
+              strokeWidth="2"
+              fill="none"
+              strokeDasharray="5,5"
+              initial={{ pathLength: 0, opacity: 0 }}
+              whileInView={{ pathLength: 1, opacity: 0.3 }}
+              transition={{ duration: 2, delay: 1 }}
+              viewport={{ once: true }}
+            />
+            <motion.path
+              d="M 200 200 Q 400 150 600 220"
+              stroke="url(#gradient2)"
+              strokeWidth="2"
+              fill="none"
+              strokeDasharray="5,5"
+              initial={{ pathLength: 0, opacity: 0 }}
+              whileInView={{ pathLength: 1, opacity: 0.3 }}
+              transition={{ duration: 2, delay: 1.5 }}
+              viewport={{ once: true }}
+            />
+            <defs>
+              <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0" />
+                <stop offset="50%" stopColor="#3b82f6" stopOpacity="0.5" />
+                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
+              </linearGradient>
+              <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0" />
+                <stop offset="50%" stopColor="#8b5cf6" stopOpacity="0.5" />
+                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+
+        {/* Bottom stats or note */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.8 }}
+          viewport={{ once: true }}
+          className="text-center"
+        >
+          <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border border-white/20 shadow-lg">
+            <motion.div
+              className="w-2 h-2 bg-green-500 rounded-full"
               animate={{ 
-                scale: [1, 1.3, 1],
+                scale: [1, 1.2, 1],
                 opacity: [1, 0.7, 1]
               }}
               transition={{
@@ -457,10 +232,25 @@ export function SupportedDexes() {
                 ease: "easeInOut"
               }}
             />
-            <span className="text-sm font-medium">Expanding to 7+ new exchanges in Q4 2025</span>
-          </motion.div>
+            <span className="text-sm font-medium text-muted-foreground">
+              Live funding rates across 5+ major perpetual DEXes
+            </span>
+            <motion.div
+              className="w-2 h-2 bg-blue-500 rounded-full"
+              animate={{ 
+                scale: [1, 1.2, 1],
+                opacity: [1, 0.7, 1]
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: 1
+              }}
+            />
+          </div>
         </motion.div>
-      </motion.div>
+      </div>
     </section>
   );
 }
