@@ -4,7 +4,7 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
+  --background: oklch(0.98 0.005 85); /* Blanc cassé/beige très clair */
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -111,7 +111,7 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+    font-family: 'Avenir Next', 'Avenir', '-apple-system', 'BlinkMacSystemFont', 'San Francisco', 'Helvetica Neue', sans-serif;
   }
   
   /* Ensure OnchainKit components inherit proper styling */
@@ -198,4 +198,79 @@
   background-color: var(--background);
   border: 1px solid var(--border);
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
+}
+
+/* ============================================
+   HERO LIGHT THEME - COMPLETELY INDEPENDENT
+   ============================================ */
+.hero-light-theme {
+  /* Fond blanc cassé/beige très clair - cohérent avec le fond global */
+  background: #FAF9F6; /* Beige très clair */
+}
+
+.hero-light-theme .hero-title {
+  color: #000000; /* Noir pur pour titre */
+}
+
+.hero-light-theme .hero-accent {
+  color: #0DA8BA; /* Teal plus saturé */
+}
+
+.hero-light-theme .hero-tagline {
+  color: #000000; /* Noir pur */
+}
+
+.hero-light-theme .hero-subtitle {
+  color: #000000; /* Noir pur */
+}
+
+.hero-light-theme .hero-text {
+  color: #000000; /* Noir pur */
+}
+
+.hero-light-theme .hero-separator {
+  background-color: #11B6C8;
+}
+
+.hero-light-theme .hero-button {
+  background-color: #11B6C8;
+  color: white;
+}
+
+.hero-light-theme .hero-button:hover {
+  background-color: #0E9FB0;
+}
+
+/* Section titles and descriptions - LIGHT MODE */
+.light .section-title {
+  color: #000000;
+}
+
+.light .section-description {
+  color: #000000;
+}
+
+/* Section titles and descriptions - DARK MODE */
+.dark .section-title {
+  color: #FFFFFF;
+}
+
+.dark .section-description {
+  color: #9CA3AF; /* text-gray-400 */
+}
+
+/* Dark mode hero title depth */
+.hero-dark-title {
+  text-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.hero-dark-accent {
+  text-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    0 4px 20px rgba(34, 211, 238, 0.3),
+    0 0 30px rgba(34, 211, 238, 0.2);
 }

@@ -16,6 +16,7 @@ export default {
         'inter': ['var(--font-inter)'],
         'jetbrains-mono': ['var(--font-jetbrains-mono)'],
         'dm-sans': ['var(--font-dm-sans)'],
+        'avenir-next': ['Avenir Next', 'Avenir', '-apple-system', 'BlinkMacSystemFont', 'San Francisco', 'Helvetica Neue', 'sans-serif'],
       },
       spacing: {
         '1': '0.25rem',  /* 4px */

@@ -41,14 +41,14 @@ function StepCard({ step, index }) {
         transition: { duration: 0.3 }
       }}
     >
-      <Card className="relative overflow-hidden h-full border-muted/20 hover:border-primary/20 transition-all duration-300 group hover:shadow-lg">
+      <Card className="relative overflow-hidden h-full border-muted/20 hover:border-cyan-400/40 transition-all duration-300 group hover:shadow-lg hover:shadow-cyan-400/10">
         {/* Background gradient on hover */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/0 to-primary/0 group-hover:from-primary/5 group-hover:to-primary/10 transition-all duration-500" />
+        <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/0 to-cyan-400/0 group-hover:from-cyan-400/5 group-hover:to-cyan-400/10 transition-all duration-500" />
         
         {/* Step connector line (except for last step) */}
         {index < 3 && (
           <motion.div
-            className="absolute top-8 -right-2 w-8 h-0.5 bg-gradient-to-r from-primary/30 to-transparent hidden md:block"
+            className="absolute top-8 -right-2 w-8 h-0.5 bg-gradient-to-r from-cyan-400/50 to-transparent hidden md:block"
             initial={{ scaleX: 0 }}
             animate={isInView ? { scaleX: 1 } : { scaleX: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
@@ -57,7 +57,7 @@ function StepCard({ step, index }) {
         
         <CardHeader className="relative">
           <motion.div 
-            className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground font-bold mb-4 shadow-lg"
+            className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-300 text-black font-bold mb-4 shadow-lg"
             whileHover={{ 
               scale: 1.1,
               rotate: 5,
@@ -69,7 +69,7 @@ function StepCard({ step, index }) {
           >
             {step.step}
           </motion.div>
-          <CardTitle className="text-lg group-hover:text-primary transition-colors duration-300">
+          <CardTitle className="text-lg group-hover:text-cyan-400 transition-colors duration-300">
             {step.title}
           </CardTitle>
         </CardHeader>
@@ -130,7 +130,7 @@ export function HowItWorks() {
         transition={{ duration: 0.6 }}
       >
         <motion.h2 
-          className="font-bold text-2xl sm:text-3xl leading-[1.1] md:text-4xl lg:text-5xl bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent px-4 sm:px-0"
+          className="font-bold text-2xl sm:text-3xl leading-[1.1] md:text-4xl lg:text-5xl section-title px-4 sm:px-0"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.6, delay: 0.1 }}
@@ -138,7 +138,7 @@ export function HowItWorks() {
           How It Works
         </motion.h2>
         <motion.p 
-          className="max-w-[85%] leading-normal text-muted-foreground text-sm sm:text-base md:text-lg sm:leading-7 px-4 sm:px-0"
+          className="max-w-[85%] leading-normal section-description text-sm sm:text-base md:text-lg sm:leading-7 px-4 sm:px-0"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.6, delay: 0.2 }}

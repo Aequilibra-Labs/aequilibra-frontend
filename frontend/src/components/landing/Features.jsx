@@ -47,9 +47,9 @@ function FeatureCard({ feature, index }) {
         transition: { duration: 0.2 }
       }}
     >
-      <Card className="relative overflow-hidden h-full border-muted/20 hover:border-muted/40 transition-all duration-300 group hover:shadow-lg">
+      <Card className="relative overflow-hidden h-full border-muted/20 hover:border-cyan-400/40 transition-all duration-300 group hover:shadow-lg hover:shadow-cyan-400/10">
         {/* Gradient overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-purple-50/0 group-hover:from-blue-50/30 group-hover:to-purple-50/30 dark:group-hover:from-blue-950/10 dark:group-hover:to-purple-950/10 transition-all duration-500" />
+        <div className="absolute inset-0 bg-gradient-to-br from-cyan-50/0 to-cyan-100/0 group-hover:from-cyan-50/10 group-hover:to-cyan-100/10 dark:group-hover:from-cyan-950/5 dark:group-hover:to-cyan-900/5 transition-all duration-500" />
         
         <CardHeader className="relative">
           <motion.div 
@@ -62,7 +62,7 @@ function FeatureCard({ feature, index }) {
           >
             {feature.icon}
           </motion.div>
-          <CardTitle className="group-hover:text-primary transition-colors duration-300">
+          <CardTitle className="group-hover:text-cyan-400 transition-colors duration-300">
             {feature.title}
           </CardTitle>
         </CardHeader>
@@ -74,7 +74,7 @@ function FeatureCard({ feature, index }) {
         
         {/* Subtle border animation */}
         <motion.div
-          className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500"
+          className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-cyan-400 to-cyan-300"
           initial={{ width: 0 }}
           whileHover={{ width: "100%" }}
           transition={{ duration: 0.3 }}
@@ -133,7 +133,7 @@ export function Features() {
         transition={{ duration: 0.6 }}
       >
         <motion.h2 
-          className="font-bold text-2xl sm:text-3xl leading-[1.1] md:text-4xl lg:text-5xl bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent px-4 sm:px-0"
+          className="font-bold text-2xl sm:text-3xl leading-[1.1] md:text-4xl lg:text-5xl section-title px-4 sm:px-0"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.6, delay: 0.1 }}
@@ -141,7 +141,7 @@ export function Features() {
           Key Features
         </motion.h2>
         <motion.p 
-          className="max-w-[85%] leading-normal text-muted-foreground text-sm sm:text-base md:text-lg sm:leading-7 px-4 sm:px-0"
+          className="max-w-[85%] leading-normal section-description text-sm sm:text-base md:text-lg sm:leading-7 px-4 sm:px-0"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.6, delay: 0.2 }}

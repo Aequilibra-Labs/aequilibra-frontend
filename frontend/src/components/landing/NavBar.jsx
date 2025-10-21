@@ -56,7 +56,7 @@ export function NavBar() {
             whileTap={{ scale: 0.95 }}
           >
             <motion.span 
-              className="font-bold text-xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
+              className="font-bold text-xl bg-gradient-to-r from-cyan-400 to-cyan-300 bg-clip-text text-transparent"
               whileHover={{
                 backgroundPosition: '200% center',
                 transition: { duration: 0.3 }
@@ -80,7 +80,7 @@ export function NavBar() {
             >
               Docs
               <motion.div
-                className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500"
+                className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-cyan-400 to-cyan-300"
                 initial={{ width: 0 }}
                 whileHover={{ width: "100%" }}
                 transition={{ duration: 0.2 }}
@@ -94,7 +94,7 @@ export function NavBar() {
             >
               Legal
               <motion.div
-                className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500"
+                className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-cyan-400 to-cyan-300"
                 initial={{ width: 0 }}
                 whileHover={{ width: "100%" }}
                 transition={{ duration: 0.2 }}
@@ -139,7 +139,7 @@ export function NavBar() {
               <Button 
                 asChild 
                 size="lg" 
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                className="bg-cyan-400 hover:bg-cyan-300 text-black font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 <a href="/app/funding-comparison">Launch App</a>
               </Button>
