@@ -42,20 +42,27 @@ export function ChainSwitcher() {
           <ChevronDown className="h-3 w-3" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuLabel>Switch Network</DropdownMenuLabel>
+      <DropdownMenuContent align="end" className="w-56 dropdown-solid selection-interface">
+        <DropdownMenuLabel className="text-foreground font-semibold">Switch Network</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {Object.entries(supportedChains).map(([chainId, chainInfo]) => (
           <DropdownMenuItem
             key={chainId}
             onClick={() => switchChain({ chainId: parseInt(chainId) })}
             disabled={isPending || chain.id === parseInt(chainId)}
-            className="cursor-pointer"
+            className={`cursor-pointer px-3 py-2 ${
+              chain.id === parseInt(chainId) 
+                ? 'bg-primary/10 text-primary font-medium' 
+                : 'hover:bg-accent hover:text-accent-foreground'
+            }`}
           >
             <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-2">
-                {/* <span>{chainInfo.icon}</span> */}
-                <span>{chainInfo.name}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-lg">{chainInfo.icon}</span>
+                <div className="flex flex-col">
+                  <span className="font-medium">{chainInfo.name}</span>
+                  <span className="text-xs text-muted-foreground">{chainInfo.shortName}</span>
+                </div>
               </div>
               {chain.id === parseInt(chainId) && (
                 <Check className="h-4 w-4 text-primary" />

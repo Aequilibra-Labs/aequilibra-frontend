@@ -13,8 +13,8 @@ import {
   ArrowUpDown,
   ExternalLink,
 } from 'lucide-react';
-import { useHyperliquidFunding } from '@/lib/hyperliquidAPI';
-import { useExtendedFunding } from '@/lib/extendedAPI';
+import { useHyperliquidFunding } from '@/hooks/protocols/hyperliquid';
+import { useExtendedFunding } from '@/lib/protocols/extended/rest';
 import {
   calculateDeltaNeutralAPY,
   getFundingDifferentialBPS,
@@ -236,6 +236,45 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
   return (
     <Card className="shadow-lg border-0 bg-card/50 backdrop-blur">
       <div className="p-8">
+        {/* Mobile Time Period Controls */}
+        <div className="lg:hidden mb-6">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium text-sm">APY Period</h3>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setTimePeriod('hours')}
+                className={`text-xs px-3 py-2 rounded transition-colors ${
+                  timePeriod === 'hours'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted hover:bg-muted/80 text-muted-foreground'
+                }`}
+              >
+                8H
+              </button>
+              <button
+                onClick={() => setTimePeriod('days')}
+                className={`text-xs px-3 py-2 rounded transition-colors ${
+                  timePeriod === 'days'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted hover:bg-muted/80 text-muted-foreground'
+                }`}
+              >
+                Day
+              </button>
+              <button
+                onClick={() => setTimePeriod('year')}
+                className={`text-xs px-3 py-2 rounded transition-colors ${
+                  timePeriod === 'year'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted hover:bg-muted/80 text-muted-foreground'
+                }`}
+              >
+                Year
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-semibold">Funding Rate Comparison</h2>
@@ -265,7 +304,132 @@ export function ComparisonFundingTable({ searchQuery = '' }) {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="lg:hidden space-y-3">
+          {filteredData.map((item) => {
+            const fundingDiffAbs = Math.abs(item.fundingDiff);
+            const isSignificantDiff = fundingDiffAbs > 25;
+            const isModerateDiff = fundingDiffAbs > 15;
+            
+            return (
+              <Card key={item.symbol} className="p-3 hover:shadow-md transition-shadow border-l-4" 
+                    style={{ borderLeftColor: isSignificantDiff ? 'rgb(239, 68, 68)' : isModerateDiff ? 'rgb(245, 158, 11)' : 'rgb(34, 197, 94)' }}>
+                <div className="space-y-3">
+                  {/* Header with improved layout */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-base">{item.base}</span>
+                      <span className="text-xs text-muted-foreground font-medium">/USD</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {item.isArbitrageOpportunity && (
+                        <Badge variant="destructive" className="text-xs px-2 py-0.5">
+                          ARB
+                        </Badge>
+                      )}
+                      <Badge 
+                        variant={isSignificantDiff ? "destructive" : isModerateDiff ? "secondary" : "outline"} 
+                        className="text-xs px-2 py-0.5"
+                      >
+                        {(item.fundingDiff || 0).toFixed(0)}bp
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Rates with improved visual hierarchy */}
+                  <div className="bg-muted/20 rounded-lg p-2 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                        <span className="text-xs font-medium text-muted-foreground">HL</span>
+                      </div>
+                      <span
+                        className={`font-mono text-sm font-bold ${
+                          item.hl.fundingRate > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                        }`}
+                      >
+                        {item.hl.fundingRate > 0 ? '+' : ''}
+                        {((item.hl.fundingRate || 0) * 100).toFixed(3)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                        <span className="text-xs font-medium text-muted-foreground">EX</span>
+                      </div>
+                      <span
+                        className={`font-mono text-sm font-bold ${
+                          item.ex.fundingRate > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                        }`}
+                      >
+                        {item.ex.fundingRate > 0 ? '+' : ''}
+                        {((item.ex.fundingRate || 0) * 100).toFixed(3)}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Delta Neutral APY - Prominent Display */}
+                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium text-primary">
+                        Delta Neutral APY ({getTimePeriodLabel()})
+                      </span>
+                      <span className="font-mono font-bold text-primary text-base">
+                        {calculateDeltaNeutralAPY(
+                          Math.abs(item.fundingDiff) / 10000,
+                          timePeriod
+                        ).toFixed(timePeriod === 'hours' ? 2 : 1)}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Strategy - Compact Display */}
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-medium text-muted-foreground">Strategy:</div>
+                    <div className="flex items-center gap-1">
+                      {item.fundingDiff > 0 ? (
+                        <>
+                          <Badge variant="destructive" className="text-xs px-1.5 py-0.5">SHORT EX</Badge>
+                          <span className="text-xs text-muted-foreground">→</span>
+                          <Badge variant="secondary" className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">LONG HL</Badge>
+                        </>
+                      ) : (
+                        <>
+                          <Badge variant="destructive" className="text-xs px-1.5 py-0.5">SHORT HL</Badge>
+                          <span className="text-xs text-muted-foreground">→</span>
+                          <Badge variant="secondary" className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">LONG EX</Badge>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 h-8 text-xs"
+                      onClick={() => handleViewAsset(item.base)}
+                    >
+                      View {item.base}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="flex-1 h-8 text-xs bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                      onClick={() => handleViewAsset(item.base)}
+                    >
+                      Trade
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Desktop Table */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b bg-muted/30">

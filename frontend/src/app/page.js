@@ -10,7 +10,7 @@ export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col w-full">
       <NavBar />
-      <main className="flex-1 w-full space-y-8 md:space-y-12">
+      <main className="flex-1 w-full space-y-6 sm:space-y-8 md:space-y-12">
         <Hero />
         <Features />
         <HowItWorks />

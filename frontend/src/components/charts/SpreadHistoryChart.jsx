@@ -11,8 +11,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import { getExtendedFundingHistory } from '@/lib/extendedAPI';
-import { HyperliquidAPI } from '@/lib/hyperliquidAPI';
+import { getExtendedFundingHistory } from '@/lib/protocols/extended/rest';
+import { hyperliquidDataService } from '@/lib/protocols/hyperliquid';
 
 const SpreadHistoryChart = ({ asset, timePeriod = 30 }) => {
   const [chartData, setChartData] = useState([]);
@@ -93,7 +93,7 @@ const SpreadHistoryChart = ({ asset, timePeriod = 30 }) => {
   const fetchHyperliquidHistory = async (asset, startTime, endTime) => {
     try {
       // Try to get actual historical data first
-      const historyData = await HyperliquidAPI.getFundingHistory(
+      const historyData = await hyperliquidDataService.getFundingHistory(
         asset,
         startTime,
         endTime
@@ -104,16 +104,42 @@ const SpreadHistoryChart = ({ asset, timePeriod = 30 }) => {
 
       // Fallback: generate data based on current rates
       try {
-        const currentRates = await HyperliquidAPI.getFundingRates();
+        const currentRates = await hyperliquidDataService.getFundingRates();
         const assetRate = currentRates.find((rate) => rate.coin === asset);
 
         if (assetRate) {
-          return HyperliquidAPI.generateHistoricalFallback(
-            asset,
-            assetRate.fundingRate,
-            startTime,
-            endTime
-          );
+          // Generate fallback data based on current rate
+          const dataPoints = [];
+          const totalHours = (endTime - startTime) / 3600;
+          const intervalHours = 8;
+          const totalPeriods = Math.ceil(totalHours / intervalHours);
+
+          for (let i = 0; i < totalPeriods; i++) {
+            const timestamp = startTime + i * intervalHours * 3600;
+            if (timestamp > endTime) break;
+
+            const baseVariation = assetRate.fundingRate * 0.1;
+            const randomFactor = (Math.random() - 0.5) * 2;
+            const timeDecay = Math.exp(-i / (totalPeriods * 0.3));
+            const variation = baseVariation * randomFactor * timeDecay;
+            const historicalRate = assetRate.fundingRate + variation;
+
+            dataPoints.push({
+              timestamp,
+              fundingRate: Math.max(historicalRate, -0.01),
+              coin: asset,
+            });
+          }
+
+          if (endTime - dataPoints[dataPoints.length - 1]?.timestamp > intervalHours * 3600 / 2) {
+            dataPoints.push({
+              timestamp: endTime - 3600,
+              fundingRate: assetRate.fundingRate,
+              coin: asset,
+            });
+          }
+
+          return dataPoints;
         }
       } catch (fallbackError) {
         console.error('Fallback generation failed:', fallbackError);
