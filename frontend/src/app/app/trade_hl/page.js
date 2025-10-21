@@ -6,7 +6,6 @@ import { useAccount, useChainId, useSignMessage } from 'wagmi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ConnectWallet } from '@/components/wallet/ConnectWallet';
-import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import SideTabs from '@/components/trade/SideTabs';
 import OrderTypeTabs from '@/components/trade/OrderTypeTabs';
@@ -16,19 +15,8 @@ import SlippageInput from '@/components/trade/SlippageInput';
 import ReduceOnlyToggle from '@/components/trade/ReduceOnlyToggle';
 import CloidInput from '@/components/trade/CloidInput';
 import LeveragePanel from '@/components/trade/LeveragePanel';
-import OpenOrdersTable from '@/components/trade/OpenOrdersTable';
-import BracketPanel from '@/components/trade/BracketPanel';
-import PositionsTable from '@/components/dashboard/PositionsTable';
 
 const DEFAULT_AGENT_NAME = 'aeq-agent';
-
-// Popular trading pairs on Hyperliquid
-const AVAILABLE_MARKETS = [
-  'BTC', 'ETH', 'SOL', 'AVAX', 'BNB', 'ADA', 'XRP', 'DOGE', 'MATIC', 'DOT',
-  'LINK', 'UNI', 'LTC', 'BCH', 'ICP', 'FIL', 'ATOM', 'VET', 'TRX', 'ETC',
-  'ALGO', 'XLM', 'AAVE', 'MANA', 'SAND', 'AXS', 'CRV', 'COMP', 'YFI', 'MKR',
-  'SUSHI', '1INCH', 'BAL', 'REN', 'ZRX', 'SNX', 'KNC', 'LRC', 'STORJ', 'BAT'
-];
 
 // Centralize API routes used by this page
 const API = {
@@ -37,9 +25,6 @@ const API = {
   activeAssetData: '/api/trading/hl/active-asset-data',
   state: '/api/trading/hl/state',
   marketClose: '/api/trading/hl/orders/market-close',
-  modifyBracket: '/api/trading/hl/bracket/modify',
-  cancelBracket: '/api/trading/hl/bracket/cancel',
-  previewBracket: '/api/trading/hl/bracket/preview',
 };
 
 export default function TradePage() {
@@ -109,20 +94,6 @@ export default function TradePage() {
   useEffect(() => { if (agent?.agent_name) setAgentName(agent.agent_name); }, [agent?.agent_name]);
 
   const [coin, setCoin] = useState('BTC');
-  const [isMarketDropdownOpen, setIsMarketDropdownOpen] = useState(false);
-  
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (isMarketDropdownOpen && !event.target.closest('.market-dropdown')) {
-        setIsMarketDropdownOpen(false);
-      }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isMarketDropdownOpen]);
-  
   const [markPx, setMarkPx] = useState('');
   const [isBuy, setIsBuy] = useState(true);
   const [orderType, setOrderType] = useState('market'); // market | limit | twap
@@ -132,10 +103,6 @@ export default function TradePage() {
   const [slippage, setSlippage] = useState('0.05');
   const [reduceOnly, setReduceOnly] = useState(false);
   const [cloid, setCloid] = useState('');
-
-  // ---- Bracket Orders State ----
-  const [bracketConfig, setBracketConfig] = useState({});
-  const [showBrackets, setShowBrackets] = useState(false);
 
   // ---- Leverage (inline; calls API.leverage) ----
   const [levMode, setLevMode] = useState('cross'); // 'cross' | 'isolated'
@@ -178,26 +145,6 @@ export default function TradePage() {
   }, [connectedAndAuthed, owner]);
 
   useEffect(() => { refreshPositions(); }, [refreshPositions]);
-
-  // ---------------- User State (for open orders) ----------------
-  const [userState, setUserState] = useState(null);
-  const [userStateBusy, setUserStateBusy] = useState(false);
-  const [userStateErr, setUserStateErr] = useState(null);
-
-  const refreshUserState = useCallback(async () => {
-    if (!connectedAndAuthed || !owner) { setUserState(null); return; }
-    try {
-      setUserStateBusy(true); setUserStateErr(null);
-      const r = await fetch(`${API.state}?owner=${owner}&agent_name=${agentName || DEFAULT_AGENT_NAME}`, { cache: 'no-store' });
-      if (!r.ok) throw new Error(`user state ${r.status}`);
-      const j = await r.json();
-      setUserState(j);
-    } catch (e) {
-      setUserStateErr(String(e?.message || e)); setUserState(null);
-    } finally { setUserStateBusy(false); }
-  }, [connectedAndAuthed, owner, agentName]);
-
-  useEffect(() => { refreshUserState(); }, [refreshUserState]);
 
   // Persistence
   useEffect(() => {
@@ -250,7 +197,7 @@ export default function TradePage() {
       agent_name: (agentName || DEFAULT_AGENT_NAME).trim() || DEFAULT_AGENT_NAME,
       coin: (coin || '').trim(),
       is_buy: Boolean(isBuy),
-      order_kind: orderType === 'limit' ? 'limit' : 'market',
+      order_type: orderType === 'limit' ? 'limit' : 'market',
       size: safeFloat(size),
       reduce_only: Boolean(reduceOnly),
     };
@@ -261,28 +208,8 @@ export default function TradePage() {
       if (slippage !== '') p.slippage = safeFloat(slippage);
     }
     if (cloid.trim()) p.cloid = cloid.trim();
-    
-    // Add bracket parameters if configured (convert percentages to decimals)
-    if (bracketConfig.sl_pct) p.sl_pct = parseFloat(bracketConfig.sl_pct) / 100;
-    if (bracketConfig.sl_px) p.sl_px = parseFloat(bracketConfig.sl_px);
-    
-    // Handle TP vs TP Ladders based on mode
-    if (bracketConfig.tp_ladder_mode && bracketConfig.tp_ladders && bracketConfig.tp_ladders.length > 0) {
-      p.tp_ladders = bracketConfig.tp_ladders.map(ladder => ({
-        target_price: parseFloat(ladder.target_price),
-        fraction: parseFloat(ladder.fraction)
-      }));
-    } else {
-      // Only set regular TP if not in ladder mode
-      if (bracketConfig.tp_pct) p.tp_pct = parseFloat(bracketConfig.tp_pct) / 100;
-      if (bracketConfig.tp_px) p.tp_px = parseFloat(bracketConfig.tp_px);
-    }
-    
-    if (bracketConfig.trailing_pct) p.trailing_pct = parseFloat(bracketConfig.trailing_pct) / 100;
-    if (bracketConfig.trailing_usd) p.trailing_usd = parseFloat(bracketConfig.trailing_usd);
-    
     return p;
-  }, [owner, agentName, coin, isBuy, orderType, size, limitPx, tif, slippage, reduceOnly, cloid, bracketConfig]);
+  }, [owner, agentName, coin, isBuy, orderType, size, limitPx, tif, slippage, reduceOnly, cloid]);
 
   // Compute derived UI data
   const notionalUSD = useMemo(() => {
@@ -312,14 +239,8 @@ export default function TradePage() {
       if (!ok) return false;
     }
     if (sizeTooBig) return false;
-    
-    // Volume validation (minimum $10 after leverage)
-    const currentLeverage = aad?.leverage?.value || 1;
-    const totalVolume = payload.size * parseFloat(markPx) * currentLeverage;
-    if (totalVolume < 10) return false;
-    
     return true;
-  }, [connectedAndAuthed, payload, orderType, sizeTooBig, markPx, aad]);
+  }, [connectedAndAuthed, payload, orderType, sizeTooBig]);
 
   // ---------------- Submit ----------------
   const [submitting, setSubmitting] = useState(false);
@@ -330,59 +251,13 @@ export default function TradePage() {
     e.preventDefault();
     setSubmitting(true); setResp(null); setErr(null);
     try {
-      console.log('Current bracketConfig:', bracketConfig);
-      console.log('Placing order with payload:', payload);
-      
-      // Always use the main trade endpoint - it handles brackets automatically
-      console.log('Using endpoint:', API.trade);
-      
       const r = await fetch(API.trade, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload) });
-      const txt = await r.text(); 
-      console.log('API Response status:', r.status, 'Response text:', txt);
-      
-      let data; 
-      try{ 
-        data = JSON.parse(txt);
-      } catch { 
-        data = { raw: txt }; 
-      }
-      
-      if (!r.ok) {
-        console.log('API Error - Status:', r.status, 'Data:', data);
-        let errorMsg = `Order failed (${r.status})`;
-        if (data) {
-          if (data.detail) {
-            errorMsg = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
-            
-            // Provide more specific error messages for common bracket issues
-            if (errorMsg.includes('Invalid TP/SL price')) {
-              errorMsg = 'Invalid TP/SL price. Please check that your stop loss and take profit are in the correct direction and within valid price ranges.';
-            } else if (errorMsg.includes('asset=0')) {
-              errorMsg = 'Asset mapping error. Please try again or contact support if the issue persists.';
-            } else if (errorMsg.includes('Stop loss must be')) {
-              errorMsg = errorMsg + ' Please adjust your stop loss percentage or price.';
-            } else if (errorMsg.includes('Take profit must be')) {
-              errorMsg = errorMsg + ' Please adjust your take profit percentage or price.';
-            }
-          } else if (data.message) {
-            errorMsg = typeof data.message === 'string' ? data.message : JSON.stringify(data.message);
-          } else if (data.raw) {
-            errorMsg = data.raw;
-          }
-        }
-        // Don't throw, just set the error directly
-        setErr(errorMsg);
-        return;
-      }
+      const txt = await r.text(); let data; try{ data = JSON.parse(txt);} catch { data = { raw: txt }; }
+      if (!r.ok) throw new Error((data && (data.detail || data.message)) || r.statusText || 'Failed');
       setResp({ status: r.status, data });
       await refreshPositions();
-      await refreshUserState();
       await fetchActiveAssetData();
-    } catch (e) { 
-      const errorMessage = e.message || String(e) || 'Order failed';
-      console.error('Order error:', e, 'Payload:', payload);
-      setErr(errorMessage); 
-    }
+    } catch (e) { setErr(e.message || 'Order failed'); }
     finally { setSubmitting(false); }
   }
 
@@ -403,7 +278,6 @@ export default function TradePage() {
       setLevMsg({ ok: true });
       await fetchActiveAssetData();
       await refreshPositions();
-      await refreshUserState();
     } catch (e) { setLevMsg({ ok: false, err: String(e?.message || e) }); }
     finally { setLevBusy(false); }
   }
@@ -426,7 +300,6 @@ export default function TradePage() {
       }
       await fetchActiveAssetData();
       await refreshPositions();
-      await refreshUserState();
       return true;
     } catch (e) {
       console.error('applyPositionLeverage', e);
@@ -437,65 +310,15 @@ export default function TradePage() {
   async function closePosition(targetCoin, partialSz) {
     try {
       const payload = { owner: owner ?? '', agent_name: (agentName || DEFAULT_AGENT_NAME).trim() || DEFAULT_AGENT_NAME, coin: targetCoin, size: partialSz ? parseFloat(String(partialSz)) : undefined };
-      console.log('Closing position with payload:', payload);
       const r = await fetch(API.marketClose, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload) });
       if (!r.ok) {
         const j = await r.json().catch(()=>({}));
-        console.log('Market close failed:', r.status, j);
-        return false; // Return false instead of throwing
-      }
-      await fetchActiveAssetData();
-      await refreshPositions();
-      await refreshUserState();
-      return true;
-    } catch (e) {
-      console.log('closePosition error:', e);
-      return false;
-    }
-  }
-
-  async function modifyBracket(coin, bracketData) {
-    try {
-      // Convert percentage values from frontend format (3) to backend format (0.03)
-      const convertedBracketData = { ...bracketData };
-      if (convertedBracketData.sl_pct) convertedBracketData.sl_pct = convertedBracketData.sl_pct / 100;
-      if (convertedBracketData.tp_pct) convertedBracketData.tp_pct = convertedBracketData.tp_pct / 100;
-      if (convertedBracketData.trailing_pct) convertedBracketData.trailing_pct = convertedBracketData.trailing_pct / 100;
-      
-      const payload = { 
-        owner: owner ?? '', 
-        agent_name: (agentName || DEFAULT_AGENT_NAME).trim() || DEFAULT_AGENT_NAME, 
-        coin: coin,
-        ...convertedBracketData
-      };
-      const r = await fetch(API.modifyBracket, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload) });
-      if (!r.ok) {
-        const j = await r.json().catch(()=>({}));
-        throw new Error(j?.detail || `modifyBracket ${r.status}`);
+        throw new Error(j?.detail || `marketClose ${r.status}`);
       }
       await fetchActiveAssetData();
       await refreshPositions();
     } catch (e) {
-      console.error('modifyBracket', e);
-    }
-  }
-
-  async function cancelBracket(coin) {
-    try {
-      const payload = { 
-        owner: owner ?? '', 
-        agent_name: (agentName || DEFAULT_AGENT_NAME).trim() || DEFAULT_AGENT_NAME, 
-        coin: coin
-      };
-      const r = await fetch(API.cancelBracket, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload) });
-      if (!r.ok) {
-        const j = await r.json().catch(()=>({}));
-        throw new Error(j?.detail || `cancelBracket ${r.status}`);
-      }
-      await fetchActiveAssetData();
-      await refreshPositions();
-    } catch (e) {
-      console.error('cancelBracket', e);
+      console.error('closePosition', e);
     }
   }
 
@@ -572,7 +395,7 @@ export default function TradePage() {
               </CardContent>
             </Card>
 
-            {/* Positions */}
+            {/* Positions (current) */}
             <Card>
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
@@ -581,73 +404,51 @@ export default function TradePage() {
                 </div>
                 {posErr ? <div className="text-xs text-red-600">{posErr}</div> : null}
                 {positions.length === 0 ? (
-                  <div className="text-xs text-muted-foreground py-4 text-center">No open positions</div>
+                  <div className="text-xs text-muted-foreground">No open positions.</div>
                 ) : (
-                  <PositionsTable 
-                    positions={positions.map(p => ({ 
-                      position: { 
-                        coin: p.coin, 
-                        szi: p.szi.toString(), 
-                        entryPx: p.entryPx?.toString(),
-                        leverage: {
-                          value: p.leverageValue,
-                          type: p.leverageType
-                        },
-                        side: p.side
-                      } 
-                    }))}
-                    owner={owner}
-                    refreshOrders={refreshUserState}  // Add refresh orders callback
-                    onPartialClose={async (closeData) => {
-                      // Implement partial close functionality
-                      console.log('Partial close:', closeData);
-                      if (closeData.coin && closeData.percentage) {
-                        // Find the position to get the current size
-                        const position = positions.find(p => p.coin === closeData.coin);
-                        if (position) {
-                          const sizeToClose = Math.abs(parseFloat(position.szi)) * closeData.percentage;
-                          await closePosition(closeData.coin, sizeToClose);
-                        }
-                      }
-                    }}
-                    onCancelBracket={async (coin) => {
-                      // Implement cancel bracket functionality
-                      console.log('Cancel bracket:', coin);
-                      await cancelBracket(coin);
-                    }}
-                    onModifyBracket={async (coin, bracketData) => {
-                      // Implement modify bracket functionality
-                      console.log('Modify bracket:', coin, bracketData);
-                      await modifyBracket(coin, bracketData);
-                    }}
-                    bracketStates={{}}
-                    refreshBrackets={() => {
-                      // Implement refresh brackets functionality
-                      console.log('Refresh brackets');
-                    }}
-                  />
+                  <div className="space-y-3">
+                    {positions.map((p) => (
+                      <div key={p.coin} className="border rounded-md p-3 text-xs grid grid-cols-1 md:grid-cols-5 gap-3 items-start">
+                        <div className="space-y-1">
+                          <div className="text-[11px] text-muted-foreground">Market</div>
+                          <div className="font-medium">{p.coin}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-[11px] text-muted-foreground">Side / Size</div>
+                          <div className={`font-mono ${p.side==='LONG'?'text-green-700':p.side==='SHORT'?'text-red-700':''}`}>{p.side} · {Math.abs(p.szi)}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-[11px] text-muted-foreground">Entry Px</div>
+                          <div className="font-mono">{p.entryPx!=null? p.entryPx : '—'}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-[11px] text-muted-foreground">Mode / Lev</div>
+                          <div>{p.leverageType ?? '—'} {p.leverageValue ?? '—'}x</div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <select className="rounded-md border px-2 py-1" defaultValue={p.leverageType==='isolated'?'isolated':'cross'} id={`mode-${p.coin}`}>
+                              <option value="cross">Cross</option>
+                              <option value="isolated">Isolated</option>
+                            </select>
+                            <input className="rounded-md border px-2 py-1" type="number" min="1" step="1" defaultValue={p.leverageValue ?? 5} id={`lev-${p.coin}`} />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <input className="rounded-md border px-2 py-1" type="number" min="0" step="0.01" placeholder="Extra USD (isolated)" id={`iso-${p.coin}`} />
+                            <Button type="button" size="sm" onClick={async ()=>{
+                              const m = document.getElementById(`mode-${p.coin}`).value;
+                              const v = document.getElementById(`lev-${p.coin}`).value;
+                              const extra = document.getElementById(`iso-${p.coin}`).value;
+                              const ok = await applyPositionLeverage(p.coin, m, v, extra);
+                              if (!ok) alert('Leverage update failed');
+                            }}>Set Lev</Button>
+                          </div>
+                          <Button type="button" variant="outline" size="sm" onClick={()=>closePosition(p.coin)}>Close</Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Open Orders */}
-            <Card>
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium">Open Orders</div>
-                  {userStateBusy ? <div className="text-xs text-muted-foreground">refreshing…</div> : null}
-                </div>
-                {userStateErr ? <div className="text-xs text-red-600">{userStateErr}</div> : null}
-                <OpenOrdersTable 
-                  owner={owner}
-                  agentName={agentName}
-                  userState={userState}
-                  onAfterChange={async () => {
-                    await refreshUserState();
-                    await refreshPositions();
-                    await fetchActiveAssetData();
-                  }}
-                />
               </CardContent>
             </Card>
           </div>
@@ -725,106 +526,27 @@ export default function TradePage() {
                   <div className="text-muted-foreground">CLOID (optional)</div>
                   <CloidInput cloid={cloid} setCloid={setCloid} />
                 </label>
-              </div>
 
-              {/* Bracket Orders Panel - Collapsible */}
-              <div className="space-y-3">
-                <Button 
-                  type="button"
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowBrackets(!showBrackets)}
-                  className="w-full justify-between text-xs"
-                >
-                  <span>SL/TP Orders</span>
-                  {showBrackets ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                </Button>
-                
-                {showBrackets && (
-                  <div className="border rounded-lg p-3 max-h-96 overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400">
-                    <BracketPanel
-                      bracketConfig={bracketConfig}
-                      setBracketConfig={setBracketConfig}
-                      markPx={parseFloat(markPx) || 0}
-                      position={{ is_buy: isBuy }}
-                      walletBalance={parseFloat(userState?.withdrawable) || 0}
-                      size={parseFloat(size) || 0}
-                      leverage={aad?.leverage?.value || 1}
-                      owner={owner}
-                      agentName={agentName}
-                      coin={coin}
-                      previewEndpoint={API.previewBracket}
-                    />
-                    {/* Debug info */}
-                    <div className="text-xs text-gray-500 mt-2">
-                      Debug: size={size}, markPx={markPx}, leverage={aad?.leverage?.value}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Agent & market inputs inline for quick edits */}
-              <div className="text-xs">
-                <div className="grid grid-cols-2 gap-3">
+                {/* Agent & market inputs inline for quick edits */}
+                <div className="grid grid-cols-2 gap-3 text-xs">
                   <label className="block">
                     <div className="text-muted-foreground">Agent</div>
-                    <input className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm cursor-not-allowed" value={agentName} readOnly disabled />
+                    <input className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={agentName} onChange={(e)=>setAgentName(e.target.value)} />
                   </label>
                   <label className="block">
                     <div className="text-muted-foreground">Market</div>
-                    <div className="relative market-dropdown">
-                      <button
-                        type="button"
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-left flex items-center justify-between hover:bg-muted/50"
-                        onClick={() => setIsMarketDropdownOpen(!isMarketDropdownOpen)}
-                      >
-                        <span>{coin}</span>
-                        <ChevronDown className={`w-4 h-4 transition-transform ${isMarketDropdownOpen ? 'rotate-180' : ''}`} />
-                      </button>
-                      
-                      {isMarketDropdownOpen && (
-                        <div className="absolute top-full mt-1 w-full z-50 bg-background border border-input rounded-md shadow-lg max-h-48 overflow-y-auto">
-                          {AVAILABLE_MARKETS.map((market) => (
-                            <button
-                              key={market}
-                              type="button"
-                              className={`w-full px-3 py-2 text-sm text-left hover:bg-muted/50 ${
-                                coin === market ? 'bg-muted/30 font-medium' : ''
-                              }`}
-                              onClick={() => {
-                                setCoin(market);
-                                setIsMarketDropdownOpen(false);
-                              }}
-                            >
-                              {market}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    <input className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={coin} onChange={(e)=>setCoin(e.target.value)} placeholder="BTC" />
                   </label>
                 </div>
               </div>
 
               {/* Submit */}
               <form onSubmit={placeOrder}>
-                <Button type="submit" disabled={!canSubmit || submitting} className={`w-full ${isBuy ? 'bg-green-600 hover:bg-green-600' : 'bg-red-600 hover:bg-red-600'} text-white relative`}>
+                <Button type="submit" disabled={!canSubmit || submitting} className={`w-full ${isBuy ? 'bg-green-600 hover:bg-green-600' : 'bg-red-600 hover:bg-red-600'} text-white`}>
                   {submitting ? 'Submitting…' : `${isBuy ? 'Buy' : 'Sell'} ${size || ''} ${coin}`}
-                  {(bracketConfig.sl_pct || bracketConfig.sl_px || bracketConfig.tp_pct || bracketConfig.tp_px || (bracketConfig.tp_ladder_mode && bracketConfig.tp_ladders?.length > 0) || bracketConfig.trailing_pct) && (
-                    <div className="absolute top-1 right-2 w-2 h-2 bg-yellow-400 rounded-full border border-white" title="Brackets configured"></div>
-                  )}
                 </Button>
                 <div className="mt-2 text-xs min-h-[1.25rem]">
                   {resp ? <span className="text-green-700">OK ({resp.status})</span> : err ? <span className="text-red-700">{err}</span> : null}
-                  {!resp && !err && (bracketConfig.sl_pct || bracketConfig.sl_px || bracketConfig.tp_pct || bracketConfig.tp_px || (bracketConfig.tp_ladder_mode && bracketConfig.tp_ladders?.length > 0) || bracketConfig.trailing_pct) && (
-                    <div className="text-muted-foreground mt-1">
-                      Brackets: 
-                      {(bracketConfig.sl_pct || bracketConfig.sl_px) && ` SL ${bracketConfig.sl_pct || '$' + bracketConfig.sl_px}`}
-                      {!bracketConfig.tp_ladder_mode && (bracketConfig.tp_pct || bracketConfig.tp_px) && ` TP ${bracketConfig.tp_pct ? bracketConfig.tp_pct + '%' : '$' + bracketConfig.tp_px}`}
-                      {bracketConfig.tp_ladder_mode && bracketConfig.tp_ladders?.length > 0 && ` TP Ladders (${bracketConfig.tp_ladders.length})`}
-                      {bracketConfig.trailing_pct && ` Trail ${bracketConfig.trailing_pct}%`}
-                    </div>
-                  )}
                 </div>
               </form>
 

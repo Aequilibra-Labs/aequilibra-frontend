@@ -27,26 +27,7 @@ export function proxyInit(req, init = {}) {
 }
 
 export async function proxyJson(req, path, init = {}) {
-  // Get the request body if it exists and hasn't been read already
-  const body = (!init.bodyAlreadyRead && req.method !== 'GET' && req.method !== 'HEAD') ? await req.text() : undefined;
-  
-  const fetchInit = {
-    method: req.method,
-    ...proxyInit(req, init),
-  };
-  
-  // Add body for non-GET requests
-  // Use the provided body from init if available, otherwise use the body we just read
-  if (init.body || body) {
-    fetchInit.body = init.body || body;
-    // Preserve content-type header
-    const contentType = req.headers.get('content-type');
-    if (contentType) {
-      fetchInit.headers['content-type'] = contentType;
-    }
-  }
-  
-  const r = await fetch(backendUrl(path, req), fetchInit);
+  const r = await fetch(backendUrl(path, req), proxyInit(req, init));
   const data = await r.json().catch(() => ({}));
   const res = NextResponse.json(data, { status: r.status });
 
