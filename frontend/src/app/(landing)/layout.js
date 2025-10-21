@@ -1,4 +1,0 @@
-// Landing page layout
-export default function LandingLayout({ children }) {
-  return <div className="landing-layout">{children}</div>;
-}

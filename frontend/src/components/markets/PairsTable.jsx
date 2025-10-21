@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, ExternalLink, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useHyperliquidMarkets } from '@/lib/hyperliquidAPI';
+import { useHyperliquidMarkets } from '@/hooks/protocols/hyperliquid';
 
 export function PairsTable({ searchQuery = '' }) {
   const router = useRouter();
