@@ -3,15 +3,17 @@
 import { motion } from 'framer-motion';
 import { useInView } from 'framer-motion';
 import { useRef } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 
-const cardVariants = {
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.15
+    }
+  }
+};
+
+const itemVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { 
     opacity: 1, 
@@ -23,63 +25,54 @@ const cardVariants = {
   }
 };
 
-const containerVariants = {
-  hidden: {},
-  visible: {
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
-
-function FeatureCard({ feature, index }) {
+function FeatureItem({ feature, index }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, threshold: 0.3 });
 
   return (
     <motion.div
       ref={ref}
-      variants={cardVariants}
+      variants={itemVariants}
       initial="hidden"
       animate={isInView ? "visible" : "hidden"}
-      whileHover={{ 
-        y: -5,
-        transition: { duration: 0.2 }
-      }}
+      className="group"
     >
-      <Card className="relative overflow-hidden h-full border-muted/20 hover:border-cyan-400/40 transition-all duration-300 group hover:shadow-lg hover:shadow-cyan-400/10">
-        {/* Gradient overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-50/0 to-cyan-100/0 group-hover:from-cyan-50/10 group-hover:to-cyan-100/10 dark:group-hover:from-cyan-950/5 dark:group-hover:to-cyan-900/5 transition-all duration-500" />
-        
-        <CardHeader className="relative">
-          <motion.div 
-            className="text-3xl mb-2"
-            whileHover={{ 
-              scale: 1.1,
-              rotate: 5,
-              transition: { duration: 0.2 }
-            }}
-          >
-            {feature.icon}
-          </motion.div>
-          <CardTitle className="group-hover:text-cyan-400 transition-colors duration-300">
-            {feature.title}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="relative">
-          <CardDescription className="leading-relaxed">
-            {feature.description}
-          </CardDescription>
-        </CardContent>
-        
-        {/* Subtle border animation */}
-        <motion.div
-          className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-cyan-400 to-cyan-300"
-          initial={{ width: 0 }}
-          whileHover={{ width: "100%" }}
-          transition={{ duration: 0.3 }}
+      <motion.div 
+        className="relative py-8 px-6 border-l-2 border-cyan-200 dark:border-cyan-800 hover:border-cyan-400 dark:hover:border-cyan-600 transition-all duration-300"
+        whileHover={{ x: 10 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+      >
+        {/* Animated background on hover */}
+        <motion.div 
+          className="absolute inset-0 bg-gradient-to-r from-cyan-50/50 to-transparent dark:from-cyan-900/20 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
         />
-      </Card>
+        
+        {/* Content */}
+        <div className="relative z-10">
+          <motion.h3 
+            className="text-xl font-bold text-foreground group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors duration-300 mb-3"
+            initial={{ opacity: 0 }}
+            animate={isInView ? { opacity: 1 } : { opacity: 0 }}
+            transition={{ delay: 0.2 + (index * 0.1) }}
+          >
+            {feature.title}
+          </motion.h3>
+          
+          <motion.p 
+            className="text-muted-foreground group-hover:text-foreground/80 transition-colors duration-300 leading-relaxed"
+            initial={{ opacity: 0 }}
+            animate={isInView ? { opacity: 1 } : { opacity: 0 }}
+            transition={{ delay: 0.4 + (index * 0.1) }}
+          >
+            {feature.description}
+          </motion.p>
+        </div>
+        
+        {/* Hover indicator */}
+        <motion.div
+          className="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-cyan-400 to-blue-500 scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-top"
+        />
+      </motion.div>
     </motion.div>
   );
 }
@@ -90,76 +83,149 @@ export function Features() {
 
   const features = [
     {
-      title: 'Aggregated Data',
+      title: 'Unified Dashboard',
       description:
-        'Compare funding rates across multiple perpetual DEXes in real-time',
-      icon: '📊',
+        'Manage all your crypto trades and strategies in one place across multiple exchanges',
+
     },
     {
-      title: 'Historical Charts',
-      description: 'Track funding rate trends and APR history over time',
-      icon: '📈',
+      title: 'Cross-Platform Trading',
+      description: 'Execute trades on multiple DEXs from a single interface - no more juggling screens',
     },
     {
-      title: 'Multi-Chain Support',
+      title: 'Funding Rate Arbitrage',
       description:
-        'Access funding data from Arbitrum, Optimism, Base, and more',
-      icon: '🔗',
+        'Access advanced arbitrage strategies with one-click delta-neutral positions',
+      
     },
     {
-      title: 'Risk Management',
+      title: 'Strategy Automation',
       description:
-        'Understand volatility and open interest before making decisions',
-      icon: '🛡️',
+        'Build and execute custom multi-exchange strategies without coding',
+      
     },
     {
-      title: 'Portfolio Tracking',
-      description: 'Monitor your positions and watch your favorite pairs',
-      icon: '📱',
+      title: 'Beginner-Friendly',
+      description: 'Intuitive interface designed for retail traders and newcomers',
+      
     },
     {
-      title: 'Non-Custodial',
-      description: 'Connect your wallet safely - we never hold your funds',
-      icon: '🔐',
+      title: 'Multi-DEX Integration',
+      description: 'Connect to Hyperliquid, Aster, Lighter, Paradex, Extended, and more',
     },
   ];
 
   return (
-    <section className="w-full px-2 sm:px-4 space-y-6 sm:space-y-8 py-12 md:py-16 lg:py-20 bg-muted/30" ref={ref}>
-      <motion.div 
-        className="mx-auto flex max-w-[58rem] flex-col items-center justify-center space-y-4 text-center"
-        initial={{ opacity: 0, y: 30 }}
-        animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-        transition={{ duration: 0.6 }}
-      >
-        <motion.h2 
-          className="font-bold text-2xl sm:text-3xl leading-[1.1] md:text-4xl lg:text-5xl section-title px-4 sm:px-0"
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-        >
-          Key Features
-        </motion.h2>
-        <motion.p 
-          className="max-w-[85%] leading-normal section-description text-sm sm:text-base md:text-lg sm:leading-7 px-4 sm:px-0"
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          Everything you need to find the best perpetual funding opportunities
-        </motion.p>
-      </motion.div>
+    <section className="relative w-full px-4 py-20 md:py-32 overflow-hidden" ref={ref}>
+      {/* Background elements */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-muted/20 to-transparent" />
       
-      <motion.div 
-        className="mx-auto grid justify-center gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-sm sm:max-w-none md:max-w-[64rem] px-4 sm:px-0"
-        variants={containerVariants}
-        initial="hidden"
-        animate={isInView ? "visible" : "hidden"}
-      >
-        {features.map((feature, index) => (
-          <FeatureCard key={index} feature={feature} index={index} />
-        ))}
-      </motion.div>
+      {/* Floating background shapes */}
+      <motion.div
+        className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-cyan-400/5 blur-3xl"
+        animate={{
+          x: [0, 50, 0],
+          y: [0, -30, 0],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+      
+      <motion.div
+        className="absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-blue-400/5 blur-3xl"
+        animate={{
+          x: [0, -30, 0],
+          y: [0, 50, 0],
+        }}
+        transition={{
+          duration: 25,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+
+      <div className="relative max-w-7xl mx-auto">
+        {/* Enhanced header with animated title */}
+        <motion.div 
+          className="text-center space-y-6 mb-20"
+          initial={{ opacity: 0, y: 30 }}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+          transition={{ duration: 0.8 }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.5 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800"
+          >
+            <span className="text-sm font-medium text-cyan-700 dark:text-cyan-300">✨ Platform Capabilities</span>
+          </motion.div>
+          
+          <motion.h2 
+            className="section-title text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-gray-900 via-cyan-700 to-blue-700 dark:from-white dark:via-cyan-300 dark:to-blue-300 bg-clip-text text-transparent"
+          >
+            {"Why Choose Our Platform".split('').map((char, i) => (
+              <motion.span
+                key={i}
+                className="inline-block"
+                initial={{ opacity: 0, y: 50 }}
+                animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+                transition={{ delay: 0.3 + (i * 0.05), duration: 0.6 }}
+              >
+                {char === ' ' ? '\u00A0' : char}
+              </motion.span>
+            ))}
+          </motion.h2>
+          
+          <motion.p 
+            className="section-description max-w-3xl mx-auto text-lg sm:text-xl leading-relaxed"
+            initial={{ opacity: 0, y: 20 }}
+            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            transition={{ duration: 0.6, delay: 0.8 }}
+          >
+            Experience the future of multi-platform trading. One unified interface to trade, arbitrage, 
+            and strategize across multiple DEXs without the complexity of managing multiple accounts.
+          </motion.p>
+        </motion.div>
+        
+        {/* Clean list with staggered animation */}
+        <motion.div 
+          className="max-w-4xl mx-auto space-y-4"
+          variants={containerVariants}
+          initial="hidden"
+          animate={isInView ? "visible" : "hidden"}
+        >
+          {features.map((feature, index) => (
+            <FeatureItem key={index} feature={feature} index={index} />
+          ))}
+        </motion.div>
+
+        {/* Call to action section */}
+        <motion.div
+          className="text-center mt-20"
+          initial={{ opacity: 0, y: 30 }}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+          transition={{ duration: 0.6, delay: 1.2 }}
+        >
+          <motion.div
+            className="inline-flex items-center gap-4 px-6 py-3 rounded-full bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 border border-cyan-200 dark:border-cyan-800"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <span className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
+              Ready to trade smarter? Experience unified multi-platform trading now
+            </span>
+            <motion.div
+              className="w-2 h-2 bg-cyan-500 rounded-full"
+              animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+          </motion.div>
+        </motion.div>
+      </div>
     </section>
   );
 }

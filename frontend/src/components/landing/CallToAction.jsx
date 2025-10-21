@@ -54,7 +54,7 @@ export function CallToAction() {
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          Ready to Find Better Funding Rates?
+          Ready to Trade Smarter, Not Harder?
         </motion.h2>
         
         <motion.p 
@@ -63,7 +63,8 @@ export function CallToAction() {
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.8, delay: 0.4 }}
         >
-          Join thousands of traders who use Aequilibra to discover profitable funding opportunities across multiple DEXes.
+          Experience the future of unified trading. One dashboard, multiple exchanges, endless possibilities. 
+          Get ready to trade with a truly unified experience - all your crypto moves, in one place, for everyone.
         </motion.p>
 
         <motion.div 
@@ -81,7 +82,7 @@ export function CallToAction() {
               asChild 
               className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-lg px-8 py-6 shadow-xl hover:shadow-2xl transition-all duration-300"
             >
-              <a href="/app/funding-comparison">Start Trading Now</a>
+              <a href="/app/funding-comparison">Experience Unified Trading</a>
             </Button>
           </motion.div>
           
@@ -109,15 +110,15 @@ export function CallToAction() {
           <div className="flex flex-wrap justify-center gap-8 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span>Live Data</span>
+              <span>Unified Dashboard</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-              <span>Multi-Chain</span>
+              <span>Cross-Platform Trading</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
-              <span>Non-Custodial</span>
+              <span>Beginner-Friendly</span>
             </div>
           </div>
         </motion.div>
