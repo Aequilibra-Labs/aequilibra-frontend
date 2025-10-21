@@ -181,7 +181,7 @@ export function SupportedDexes() {
       <motion.div
         className="absolute inset-0 opacity-30"
         style={{
-          background: 'radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(147, 51, 234, 0.1) 0%, transparent 50%)'
+          background: 'radial-gradient(circle at 20% 50%, rgba(34, 211, 238, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(103, 232, 249, 0.1) 0%, transparent 50%)'
         }}
         animate={{
           scale: [1, 1.1, 1],
@@ -204,10 +204,10 @@ export function SupportedDexes() {
           className="text-center space-y-4 mb-16"
           variants={cardVariants}
         >
-          <h2 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 dark:from-white dark:via-blue-200 dark:to-purple-200 bg-clip-text text-transparent">
+          <h2 className="text-3xl md:text-5xl font-bold section-title">
             Supported Exchanges
           </h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+          <p className="text-xl section-description max-w-3xl mx-auto">
             Compare funding rates across leading decentralized exchanges with more integrations coming soon
           </p>
         </motion.div>
@@ -377,8 +377,8 @@ export function SupportedDexes() {
                 <div className="h-full p-6 rounded-xl bg-background/60 backdrop-blur-sm border-2 border-dashed border-blue-500/30 hover:border-blue-500/50 transition-all duration-300 space-y-4">
                   {/* Status Badge */}
                   <div className="absolute top-4 right-4">
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/10 text-blue-600 text-xs font-medium">
-                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-cyan-500/10 text-cyan-400 text-xs font-medium">
+                      <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
                       Soon
                     </span>
                   </div>
@@ -386,14 +386,14 @@ export function SupportedDexes() {
                   {/* Logo placeholder and Name */}
                   <div className="flex items-center gap-3">
                     <motion.div 
-                      className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-600/20 flex items-center justify-center"
+                      className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500/20 to-cyan-300/20 flex items-center justify-center"
                       whileHover={{ scale: 1.05 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded opacity-60" />
+                      <div className="w-6 h-6 bg-gradient-to-br from-cyan-400 to-cyan-300 rounded opacity-60" />
                     </motion.div>
                     <div>
-                      <h3 className="font-semibold text-foreground group-hover:text-blue-600 transition-colors">
+                      <h3 className="font-semibold text-foreground group-hover:text-cyan-400 transition-colors">
                         {dex.name}
                       </h3>
                       <p className="text-xs text-muted-foreground">
@@ -405,7 +405,7 @@ export function SupportedDexes() {
                   {/* Expected Volume */}
                   <div className="space-y-1">
                     <div className="text-xs text-muted-foreground">Expected Volume</div>
-                    <div className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    <div className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-cyan-300 bg-clip-text text-transparent">
                       {dex.expectedVolume}
                     </div>
                   </div>
@@ -417,7 +417,7 @@ export function SupportedDexes() {
                       {dex.chains.map((chainName) => (
                         <span 
                           key={chainName}
-                          className="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-600 font-medium"
+                          className="text-xs px-2 py-1 rounded-full bg-cyan-500/10 text-cyan-400 font-medium"
                         >
                           {chainName}
                         </span>
@@ -427,7 +427,7 @@ export function SupportedDexes() {
 
                   {/* Hover effect */}
                   <motion.div
-                    className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-600/5 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                    className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-400/5 to-cyan-300/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                   />
                 </div>
               </motion.div>
@@ -441,12 +441,12 @@ export function SupportedDexes() {
           variants={cardVariants}
         >
           <motion.div 
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm border border-muted/50"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-cyan-400/20 to-cyan-300/20 backdrop-blur-sm border border-muted/50"
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >
             <motion.div 
-              className="w-2 h-2 bg-blue-500 rounded-full"
+              className="w-2 h-2 bg-cyan-400 rounded-full"
               animate={{ 
                 scale: [1, 1.3, 1],
                 opacity: [1, 0.7, 1]
