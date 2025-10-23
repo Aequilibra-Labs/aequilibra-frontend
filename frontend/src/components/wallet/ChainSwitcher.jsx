@@ -35,7 +35,14 @@ export function ChainSwitcher() {
         <Button variant="outline" size="sm" className="flex items-center gap-2">
           {currentChain && (
             <>
-              {/*    <span className="text-sm">{currentChain.icon}</span> */}
+              <img 
+                src={currentChain.icon} 
+                alt={currentChain.name}
+                className="w-4 h-4"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                }}
+              />
               <span className="hidden sm:inline">{currentChain.shortName}</span>
             </>
           )}
@@ -58,7 +65,14 @@ export function ChainSwitcher() {
           >
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-3">
-                <span className="text-lg">{chainInfo.icon}</span>
+                <img 
+                  src={chainInfo.icon} 
+                  alt={chainInfo.name}
+                  className="w-5 h-5"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
                 <div className="flex flex-col">
                   <span className="font-medium">{chainInfo.name}</span>
                   <span className="text-xs text-muted-foreground">{chainInfo.shortName}</span>

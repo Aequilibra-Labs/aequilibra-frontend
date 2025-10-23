@@ -51,18 +51,18 @@ export default function HomePage() {
               <Features />
             </ScrollAnimation>
             
-            {/* How It Works Section */}
-            <ScrollAnimation animation="fadeInRight" delay={0.1} threshold={0.2}>
+            {/* How It Works Section - Hidden on mobile */}
+            <ScrollAnimation animation="fadeInRight" delay={0.1} threshold={0.2} className="hidden md:block">
               <HowItWorks />
             </ScrollAnimation>
             
-            {/* Supported DEXes Section */}
-            <ScrollAnimation animation="scaleIn" delay={0.1} threshold={0.2}>
+            {/* Supported DEXes Section - Hidden on mobile */}
+            <ScrollAnimation animation="scaleIn" delay={0.1} threshold={0.2} className="hidden md:block">
               <SupportedDexes />
             </ScrollAnimation>
             
-            {/* Call to Action Section */}
-            <ScrollAnimation animation="fadeInUp" delay={0.1} threshold={0.2}>
+            {/* Call to Action Section - Hidden on mobile */}
+            <ScrollAnimation animation="fadeInUp" delay={0.1} threshold={0.2} className="hidden md:block">
               <CallToAction />
             </ScrollAnimation>
           </StaggerContainer>

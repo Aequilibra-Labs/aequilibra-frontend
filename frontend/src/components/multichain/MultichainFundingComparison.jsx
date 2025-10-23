@@ -78,13 +78,13 @@ export default function MultichainFundingComparison() {
 
   const getChainIcon = (chainId) => {
     const chainMap = {
-      1: '⚫', // Ethereum
-      42161: '🔵', // Arbitrum
-      10: '🔴', // Optimism
-      8453: '🔷', // Base
-      137: '🟣', // Polygon
-      56: '🟡', // BSC
-      'universal': '🌐', // Cross-chain
+      1: '/chain-icons/eth.svg', // Ethereum
+      42161: '/chain-icons/arb.svg', // Arbitrum
+      10: '/chain-icons/op.svg', // Optimism
+      8453: '/chain-icons/base.svg', // Base
+      137: '/chain-icons/matic.svg', // Polygon
+      56: '/chain-icons/bnb.svg', // BSC
+      'universal': '🌐', // Cross-chain (keep emoji for universal)
     };
     return chainMap[chainId] || '❓';
   };
@@ -146,7 +146,18 @@ export default function MultichainFundingComparison() {
                 : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
           >
-            <span>{getChainIcon(chainId)}</span>
+            {typeof getChainIcon(chainId) === 'string' && getChainIcon(chainId).startsWith('/') ? (
+              <img 
+                src={getChainIcon(chainId)} 
+                alt={getChainName(chainId)}
+                className="w-4 h-4"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                }}
+              />
+            ) : (
+              <span>{getChainIcon(chainId)}</span>
+            )}
             <span>{getChainName(chainId)}</span>
           </button>
         ))}
@@ -208,7 +219,18 @@ export default function MultichainFundingComparison() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       <div className="flex items-center gap-2">
-                        <span>{getChainIcon(rate.chainId)}</span>
+                        {typeof getChainIcon(rate.chainId) === 'string' && getChainIcon(rate.chainId).startsWith('/') ? (
+                          <img 
+                            src={getChainIcon(rate.chainId)} 
+                            alt={getChainName(rate.chainId)}
+                            className="w-4 h-4"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <span>{getChainIcon(rate.chainId)}</span>
+                        )}
                         <span>{getChainName(rate.chainId)}</span>
                       </div>
                     </td>
@@ -255,7 +277,18 @@ export default function MultichainFundingComparison() {
               className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
             >
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-lg">{getChainIcon(chainId)}</span>
+                {typeof getChainIcon(chainId) === 'string' && getChainIcon(chainId).startsWith('/') ? (
+                  <img 
+                    src={getChainIcon(chainId)} 
+                    alt={getChainName(chainId)}
+                    className="w-5 h-5"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <span className="text-lg">{getChainIcon(chainId)}</span>
+                )}
                 <h4 className="font-semibold text-gray-900 dark:text-white">
                   {getChainName(chainId)}
                 </h4>

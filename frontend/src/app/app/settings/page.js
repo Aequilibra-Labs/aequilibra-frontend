@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ChainSwitcher } from '@/components/wallet/ChainSwitcher';
+import { DesktopFallback } from '@/components/ui/ComingSoon';
 import { 
   Bell, 
   Shield, 
@@ -15,7 +16,7 @@ import {
 
 // Settings page for user preferences
 export default function SettingsPage() {
-  return (
+  const settingsContent = (
     <div className="p-4 md:p-6 max-w-2xl mx-auto">
       <div className="space-y-6">
         <div>
@@ -137,5 +138,14 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  );
+
+  return (
+    <DesktopFallback 
+      comingSoonTitle="Settings Coming Soon!"
+      comingSoonDescription="We're developing a powerful settings interface for mobile. Customize your trading preferences, notifications, security settings, and more!"
+    >
+      {settingsContent}
+    </DesktopFallback>
   );
 }

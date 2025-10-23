@@ -27,7 +27,7 @@ export default function FundingRatesCard({
   setSortOrder
 }) {
   return (
-    <Card className="border-border shadow-lg bg-card/60 backdrop-blur-sm">
+    <Card className="border-0 shadow-lg bg-card/60 backdrop-blur-sm">
       <CardHeader className="pb-2">
         <div className="flex items-end justify-between">
           <div>

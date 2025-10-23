@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { DesktopFallback } from '@/components/ui/ComingSoon';
 import { 
   TrendingUp, 
   Wallet, 
@@ -11,7 +12,7 @@ import {
 
 // Dashboard overview page - optimized for Base Mini App guidelines
 export default function DashboardPage() {
-  return (
+  const dashboardContent = (
     <div className="p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="space-y-2">
@@ -107,5 +108,14 @@ export default function DashboardPage() {
         </Card>
       </div>
     </div>
+  );
+
+  return (
+    <DesktopFallback 
+      comingSoonTitle="Dashboard Coming Soon!"
+      comingSoonDescription="We're building an amazing dashboard experience for mobile. Stay tuned for real-time portfolio tracking, funding opportunities, and more!"
+    >
+      {dashboardContent}
+    </DesktopFallback>
   );
 }

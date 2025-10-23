@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Search, RefreshCw, Filter, X, Star } from 'lucide-react';
+import { Search, RefreshCw, Filter, X, Star, ChevronUp, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Filters from './Filters';
 import { useState } from 'react';
@@ -39,11 +39,12 @@ export default function Toolbar({
 }) {
   const [showFilters, setShowFilters] = useState(false);
   const [showDesktopFilters, setShowDesktopFilters] = useState(false);
+  const [isToolbarExpanded, setIsToolbarExpanded] = useState(true);
 
   return (
     <>
-    <div className="space-y-4 p-1">
-      {/* Header Section */}
+    <div className="relative space-y-4 p-1 rounded-lg bg-card shadow-sm">
+      {/* Always visible header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-100 dark:to-white bg-clip-text text-transparent">
@@ -84,7 +85,8 @@ export default function Toolbar({
         </div>
       </div>
 
-      {/* Controls Section */}
+      {/* Collapsible Controls Section */}
+      {isToolbarExpanded && (
       <div className="space-y-4">
         {/* Platform Selection & Search */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -304,6 +306,20 @@ export default function Toolbar({
           </div>
         )}
       </div>
+      )}
+
+      {/* Toggle Button - Bottom Right */}
+      <button
+        onClick={() => setIsToolbarExpanded(!isToolbarExpanded)}
+        className="absolute bottom-2 right-2 p-2 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 z-10"
+        aria-label={isToolbarExpanded ? 'Collapse toolbar' : 'Expand toolbar'}
+      >
+        {isToolbarExpanded ? (
+          <ChevronUp className="h-4 w-4" />
+        ) : (
+          <ChevronDown className="h-4 w-4" />
+        )}
+      </button>
     </div>
 
     {/* Mobile Modal for Filters - Only shows on mobile */}

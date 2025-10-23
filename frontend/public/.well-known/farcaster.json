@@ -11,21 +11,21 @@
     "version": "1",
     "name": "Aequilibra",
     "homeUrl": "https://aequilibra.vercel.app",
-    "iconUrl": "https://aequilibra.vercel.app/pepe.png",
-    "splashImageUrl": "https://aequilibra.vercel.app/pepe.png",
+    "iconUrl": "https://aequilibra.vercel.app/logo.png",
+    "splashImageUrl": "https://aequilibra.vercel.app/logo.png",
     "splashBackgroundColor": "#000000",
-    "subtitle": "Find the best funding across perps",
+    "subtitle": "PerpDex Aggregator",
     "description": "Aggregate perpetual DEX funding rates. Compare pairs, track history, and build neutral strategies. Access GMX, dYdX, Perpetual Protocol and more.",
     "screenshotUrls": [
-      "https://aequilibra.vercel.app/pepe.png"
+      "https://aequilibra.vercel.app/preview_1.png"
     ],
     "primaryCategory": "finance",
     "tags": ["defi", "funding", "perpetuals", "arbitrage", "finance"],
-    "heroImageUrl": "https://aequilibra.vercel.app/pepe.png",
+    "heroImageUrl": "https://aequilibra.vercel.app/hero.png",
     "tagline": "Smart funding arbitrage",
     "ogTitle": "Aequilibra - Find the best funding across perps",
-    "ogDescription": "Aggregate perpetual DEX funding rates. Compare pairs, track history, and build neutral strategies.",
-    "ogImageUrl": "https://aequilibra.vercel.app/pepe.png",
+    "ogDescription": "Arbitrage for everyone",
+    "ogImageUrl": "https://aequilibra.vercel.app/preview_1.png",
     "noindex": false
   }
 }

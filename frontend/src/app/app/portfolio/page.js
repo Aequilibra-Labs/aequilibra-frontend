@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DesktopFallback } from '@/components/ui/ComingSoon';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -94,7 +95,7 @@ export default function PortfolioPage() {
     }
   };
 
-  return (
+  const portfolioContent = (
     <div className="relative w-full px-4 space-y-6 pb-8 pt-6 md:pb-12 md:pt-10 lg:py-22 mt-12 overflow-hidden min-h-screen">
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20 pointer-events-none" />
@@ -273,5 +274,14 @@ export default function PortfolioPage() {
         </div>
       </motion.div>
     </div>
+  );
+
+  return (
+    <DesktopFallback 
+      comingSoonTitle="Portfolio Coming Soon!"
+      comingSoonDescription="We're crafting a comprehensive portfolio management experience for mobile. Track positions, manage investments, and monitor performance across all platforms!"
+    >
+      {portfolioContent}
+    </DesktopFallback>
   );
 }

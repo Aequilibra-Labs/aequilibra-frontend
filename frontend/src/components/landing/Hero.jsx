@@ -115,9 +115,9 @@ export function Hero() {
         }}
         className="absolute inset-0 pointer-events-none"
       >
-        {/* Large floating shapes */}
+        {/* Large floating shapes - Reduced size on mobile */}
         <motion.div
-          className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full"
+          className="absolute top-1/4 left-1/4 w-32 h-32 md:w-72 md:h-72 rounded-full"
           style={{
             background: isLight 
               ? "linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))"
@@ -137,7 +137,7 @@ export function Hero() {
         />
         
         <motion.div
-          className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full"
+          className="absolute bottom-1/4 right-1/4 w-48 h-48 md:w-96 md:h-96 rounded-full"
           style={{
             background: isLight 
               ? "linear-gradient(225deg, rgba(139, 92, 246, 0.08), rgba(59, 130, 246, 0.08))"
@@ -186,19 +186,19 @@ export function Hero() {
       {/* Main content with parallax */}
       <motion.div 
         style={{ y: textY }}
-        className="relative z-10 mx-auto max-w-7xl px-4 text-center"
+        className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 text-center"
       >
         <motion.div 
           variants={staggerContainer}
           initial="initial"
           animate="animate"
-          className="space-y-12"
+          className="space-y-8 sm:space-y-12"
         >
           {/* Kinetic typography */}
-          <motion.div variants={fadeInUp} className="space-y-8">
+          <motion.div variants={fadeInUp} className="space-y-6 sm:space-y-8">
             {/* Animated tagline */}
             <motion.p 
-              className={`text-sm sm:text-base font-mono tracking-[0.2em] uppercase font-medium ${
+              className={`text-xs sm:text-sm md:text-base font-mono tracking-[0.15em] sm:tracking-[0.2em] uppercase font-medium ${
                 isLight ? 'text-slate-800' : 'text-cyan-300'
               }`}
             >
@@ -216,7 +216,7 @@ export function Hero() {
             </motion.p>
 
             {/* Main title with word-by-word animation */}
-            <motion.h1 className="text-5xl sm:text-6xl lg:text-8xl font-bold leading-tight">
+            <motion.h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-bold leading-tight">
               {["Aequilibra"].map((word, i) => (
                 <motion.span
                   key={i}
@@ -251,7 +251,7 @@ export function Hero() {
               className="max-w-3xl mx-auto"
             >
               <motion.p 
-                className={`text-xl sm:text-2xl leading-relaxed ${
+                className={`text-lg sm:text-xl md:text-2xl leading-relaxed ${
                   isLight ? 'text-slate-700' : 'text-gray-300'
                 }`}
                 initial={{ opacity: 0 }}
@@ -274,7 +274,7 @@ export function Hero() {
             {/* Interactive badges */}
             <motion.div 
               variants={fadeInUp}
-              className="flex flex-wrap justify-center gap-4"
+              className="flex flex-wrap justify-center gap-2 sm:gap-4"
             >
               {["Cross-platform trading", "Funding rate arbitrage", "Automated strategies", "Unified experience"].map((note, i) => (
                 <motion.div
@@ -289,7 +289,7 @@ export function Hero() {
                   }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <div className={`px-4 py-2 rounded-full text-sm font-medium border backdrop-blur-sm ${
+                  <div className={`px-3 py-2 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium border backdrop-blur-sm ${
                     isLight 
                       ? 'bg-white/90 border-slate-300 text-slate-800 hover:bg-slate-50 hover:border-slate-400' 
                       : 'bg-gray-800/80 border-gray-600 text-gray-200 hover:bg-cyan-900/30 hover:border-cyan-500'
@@ -303,7 +303,7 @@ export function Hero() {
 
           {/* CTA Buttons */}
           <motion.div 
-            className="flex flex-col sm:flex-row gap-6 items-center justify-center"
+            className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center justify-center px-4"
             variants={scaleIn}
           >
             <motion.div
@@ -314,7 +314,7 @@ export function Hero() {
               <Button 
                 size="lg" 
                 asChild 
-                className={`relative overflow-hidden font-semibold text-lg px-12 py-6 h-auto uppercase tracking-wider shadow-xl ${
+                className={`relative overflow-hidden font-semibold text-base sm:text-lg px-8 py-4 sm:px-12 sm:py-6 h-auto uppercase tracking-wider shadow-xl w-full sm:w-auto ${
                   isLight 
                     ? 'bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white' 
                     : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white'
@@ -340,7 +340,7 @@ export function Hero() {
               <Button 
                 variant="outline" 
                 size="lg" 
-                className={`backdrop-blur-sm border-2 font-medium px-12 py-6 h-auto text-lg ${
+                className={`backdrop-blur-sm border-2 font-medium px-8 py-4 sm:px-12 sm:py-6 h-auto text-base sm:text-lg w-full sm:w-auto ${
                   isLight 
                     ? 'bg-white/90 border-slate-400 text-slate-800 hover:bg-slate-50 hover:border-slate-600 hover:text-slate-900' 
                     : 'bg-gray-800/50 border-gray-600 text-gray-200 hover:bg-cyan-900/30 hover:border-cyan-500 hover:text-cyan-300'
@@ -353,11 +353,11 @@ export function Hero() {
 
           {/* Additional descriptive text */}
           <motion.div 
-            className="max-w-4xl mx-auto"
+            className="max-w-4xl mx-auto px-4"
             variants={fadeInUp}
           >
             <motion.p 
-              className={`text-lg leading-relaxed ${
+              className={`text-base sm:text-lg leading-relaxed ${
                 isLight ? 'text-slate-700' : 'text-gray-300'
               }`}
             >

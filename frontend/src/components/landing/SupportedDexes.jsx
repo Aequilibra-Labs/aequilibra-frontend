@@ -268,67 +268,41 @@ const staticDexes = [
   {
     name: 'Hyperliquid',
     logo: '/hyprliquid.png',
-    description: 'CEX-level speed with DeFi transparency on its own Layer-1 chain',
-    chains: ['Hyperliquid L1'],
     status: 'active',
-    apiName: 'Hyperliquid Perps'
   },
   {
     name: 'Aster',
-    logo: '/edgex.png',
-    description: 'Next-gen perp DEX with up to 1001× leverage and MEV-resistant execution',
-    chains: ['Arbitrum'],
+    logo: '/aster.png',
     status: 'active',
-    apiName: 'edgeX Perps'
+    apiName: 'Aster Perps'
   },
   {
     name: 'Extended',
     logo: '/extended.png',
-    description: 'Clean, intuitive UI with powerful infrastructure for CEX-like trading experience',
-    chains: ['Arbitrum'],
     status: 'active',
-    apiName: 'Extended'
   },
   {
     name: 'Lighter',
-    logo: '/hibachi.png',
-    description: 'Fully verifiable perp exchange with millisecond-latency and zero fees',
-    chains: ['Arbitrum'],
+    logo: '/lighter.png',
     status: 'active',
-    apiName: 'Hibachi'
+  },
+  {
+    name: 'Paradex',
+    logo: '/paradex.png',
+    status: 'active',
   }
 ];
 
 const comingSoonDexes = [
   {
-    name: 'Paradex',
-    description: 'Zero-fee "super exchange" with 250+ markets and better-than-CEX liquidity',
-    chains: ['StarkNet'],
-    expectedVolume: '$210M+'
+    name: 'Avantis',
+    logo: '/avantis.png',
+    status: 'comingSoon',
   },
   {
-    name: 'Jupiter Perps',
-    description: 'Solana-based perpetual exchange with high liquidity',
-    chains: ['Solana'],
-    expectedVolume: '$860M+'
-  },
-  {
-    name: 'Drift Trade',
-    description: 'High-performance Solana perp DEX',
-    chains: ['Solana'],
-    expectedVolume: '$480M+'
-  },
-  {
-    name: 'Orderly',
-    description: 'Cross-chain orderbook DEX with unified liquidity',
-    chains: ['NEAR', 'Ethereum'],
-    expectedVolume: '$440M+'
-  },
-  {
-    name: 'dYdX V4',
-    description: 'Leading derivatives exchange on its own blockchain',
-    chains: ['dYdX Chain'],
-    expectedVolume: '$220M+'
+    name: 'Synfutures',
+    logo: '/synfutures.png',
+    status: 'comingSoon',
   }
 ];
 
