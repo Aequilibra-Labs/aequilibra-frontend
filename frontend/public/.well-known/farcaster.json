@@ -23,9 +23,9 @@
     "tags": ["defi", "funding", "perpetuals", "arbitrage", "finance"],
     "heroImageUrl": "https://aequilibra.vercel.app/hero.png",
     "tagline": "Smart funding arbitrage",
-    "ogTitle": "Aequilibra - Find the best funding across perps",
+    "ogTitle": "Aequilibra",
     "ogDescription": "Arbitrage for everyone",
-    "ogImageUrl": "https://aequilibra.vercel.app/preview_1.png",
+    "ogImageUrl": "https://aequilibra.vercel.app/og-image.png",
     "noindex": false
   }
 }
