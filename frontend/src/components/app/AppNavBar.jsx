@@ -8,66 +8,11 @@ export function AppNavBar() {
     <nav className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-4 md:px-8">
         <div className="flex items-center gap-2">
-          <a className="flex items-center space-x-2" href="/">
-            <span className="font-bold text-xl">Aequilibra</span>
+          <a className="flex items-center space-x-2" href="/app/zama-game">
+            <span className="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600">
+              Zama Voting Game
+            </span>
           </a>
-          <nav className="hidden md:flex items-center gap-6 text-base ml-8">
-            {/* Hidden sections for local testing */}
-            {/* <a
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
-              href="/app"
-            >
-              Dashboard
-            </a>
-            <a
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
-              href="/app/markets"
-            >
-              Markets
-            </a> */}
-            
-            {/* Only Funding Rates section visible */}
-            <a
-              className="transition-colors hover:text-foreground/80 text-foreground"
-              href="/app/funding-comparison"
-            >
-              Funding Rates
-            </a>
-            
-            {/* OnchainKit Demo */}
-            <a
-              className="transition-colors hover:text-foreground/80 text-blue-600 font-medium"
-              href="/onchain-demo"
-            >
-              OnchainKit Demo
-            </a>
-            
-            {/* Hidden sections for local testing */}
-            {/* <a
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
-              href="/app/trade"
-            >
-              Trade
-            </a>
-            <a
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
-              href="/app/portfolio"
-            >
-              Portfolio
-            </a>
-            <a
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
-              href="/app/profile"
-            >
-              Profile
-            </a>
-            <a
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
-              href="/app/trade_hl"
-            >
-              trade_hl
-            </a> */}
-          </nav>
         </div>
         <div className="flex items-center space-x-2 md:space-x-3">
           <div className="hidden md:flex items-center space-x-3">

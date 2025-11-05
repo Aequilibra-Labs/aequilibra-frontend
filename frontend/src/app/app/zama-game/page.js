@@ -4,7 +4,11 @@ import { ethers } from "ethers";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Vote, DollarSign, Trophy, Shield, Clock, TrendingUp, Award, Sparkles } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Vote, DollarSign, Trophy, Shield, Clock, TrendingUp, Award, Sparkles, Plus, List, Calendar, CheckCircle, XCircle } from "lucide-react";
+import VotingFactoryABI from "./contracts/VotingFactory.sol/VotingFactory.json";
 import PrivateVotingABI from "./contracts/zamahub.sol/PrivateVoting.json";
 import MockUSDCABI from "./contracts/MockUSDC.sol/MockUSDC.json";
 
@@ -13,16 +17,40 @@ export default function ZamaVotingPage() {
   const [status, setStatus] = useState("Initializing...");
   const [instance, setInstance] = useState(null);
   const [userAddress, setUserAddress] = useState("");
+  const [activeTab, setActiveTab] = useState("votings");
   
-  // Voting contract state
+  // Create voting form state
+  const [votingName, setVotingName] = useState("");
+  const [voteDeposit, setVoteDeposit] = useState("10");
+  const [votingDuration, setVotingDuration] = useState("3600"); // 1 hour in seconds
+  const [votingStartTime, setVotingStartTime] = useState("");
+  const [createLoading, setCreateLoading] = useState(false);
+  
+  // Voting options state
+  const [optionA, setOptionA] = useState({ emoji: "🎯", label: "Option A", description: "Moderate Growth - $4,000" });
+  const [optionB, setOptionB] = useState({ emoji: "🚀", label: "Option B", description: "Moon Shot - $10,000" });
+  const [optionC, setOptionC] = useState({ emoji: "📉", label: "Option C", description: "Bear Market - $2,000" });
+  
+  // Votings list state
+  const [allVotings, setAllVotings] = useState([]);
+  const [ongoingVotings, setOngoingVotings] = useState([]);
+  const [upcomingVotings, setUpcomingVotings] = useState([]);
+  const [endedVotings, setEndedVotings] = useState([]);
+  const [listLoading, setListLoading] = useState(false);
+  
+  // Selected voting state
+  const [selectedVoting, setSelectedVoting] = useState(null);
   const [votingData, setVotingData] = useState(null);
   const [selectedOption, setSelectedOption] = useState(null);
   const [usdcBalance, setUsdcBalance] = useState("0");
   const [votingLoading, setVotingLoading] = useState(false);
 
   // Deployed contract addresses
-  const votingContractAddress = "0x8562B01A358E31a8B33fcFE961d25131a3c86428";
-  const usdcContractAddress = "0xfc8cEFAC3fba65C97E385233d85c6D7f45585b7f";
+  const votingFactoryAddress = "0x6D6BbdbB4Bb1C2361C45FC2548C20Da7EF822330";
+  const usdcContractAddress = "0xffE01B10073099afafE2D09fE4c125E68864587A";
+  const wheelPoolAddress = "0xd2F31a7F36f74ae697f790d01B45DBc4a9Ade429";
+  const decryptionOracleAddress = "0xa02Cda4Ca3a71D7C46997716F4283aa851C28812";
+  const protocolTreasuryAddress = "0xF92c6d8F1cba15eE6c737a7E5c121ad5b6b78982";
 
   // === Initialize the Zama SDK ===
   useEffect(() => {
@@ -90,16 +118,180 @@ export default function ZamaVotingPage() {
     initZama();
   }, []);
 
-  // === VOTING FUNCTIONS ===
+  // === FACTORY FUNCTIONS ===
 
-  // Load voting contract data
-  const loadVotingData = async () => {
+  // Load all votings from factory
+  const loadAllVotings = async () => {
+    try {
+      setListLoading(true);
+      console.log("📡 Connecting to VotingFactory at:", votingFactoryAddress);
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const factory = new ethers.Contract(
+        votingFactoryAddress,
+        VotingFactoryABI.abi,
+        provider
+      );
+
+      // Get all votings categorized
+      console.log("🔍 Fetching votings from factory...");
+      const [all, ongoing, upcoming, ended] = await Promise.all([
+        factory.getAllVotings(),
+        factory.getActiveVotings(),
+        factory.getUpcomingVotings(),
+        factory.getEndedVotings()
+      ]);
+      
+      console.log("📊 Factory returned:", {
+        all: all.length,
+        ongoing: ongoing.length,
+        upcoming: upcoming.length,
+        ended: ended.length
+      });
+      console.log("📍 All voting addresses:", all);
+      console.log("📍 Ongoing addresses:", ongoing);
+      console.log("📍 Upcoming addresses:", upcoming);
+      console.log("📍 Ended addresses:", ended);
+
+      // Load details for each voting
+      const loadVotingDetails = async (address) => {
+        const voting = new ethers.Contract(address, PrivateVotingABI.abi, provider);
+        try {
+          const [name, startTime, endTime, depositAmount, resolved, revealed] = await Promise.all([
+            voting.name(),
+            voting.votingStartTime(),
+            voting.votingEndTime(),
+            voting.VOTE_DEPOSIT_AMOUNT(),
+            voting.votingResolved(),
+            voting.resultsRevealed()
+          ]);
+          
+          return {
+            address,
+            name,
+            startTime: Number(startTime),
+            endTime: Number(endTime),
+            depositAmount: ethers.formatUnits(depositAmount, 6),
+            resolved,
+            revealed
+          };
+        } catch (err) {
+          console.error(`Error loading voting ${address}:`, err);
+          return null;
+        }
+      };
+
+      const [allDetails, ongoingDetails, upcomingDetails, endedDetails] = await Promise.all([
+        Promise.all(all.map(loadVotingDetails)),
+        Promise.all(ongoing.map(loadVotingDetails)),
+        Promise.all(upcoming.map(loadVotingDetails)),
+        Promise.all(ended.map(loadVotingDetails))
+      ]);
+
+      setAllVotings(allDetails.filter(Boolean));
+      setOngoingVotings(ongoingDetails.filter(Boolean));
+      setUpcomingVotings(upcomingDetails.filter(Boolean));
+      setEndedVotings(endedDetails.filter(Boolean));
+      
+      console.log("✅ Votings loaded:", { all: allDetails.length, ongoing: ongoingDetails.length, upcoming: upcomingDetails.length, ended: endedDetails.length });
+    } catch (err) {
+      console.error("❌ Failed to load votings:", err);
+      setStatus(`❌ Failed to load votings: ${err.message}`);
+    } finally {
+      setListLoading(false);
+    }
+  };
+
+  // Create a new voting
+  const handleCreateVoting = async () => {
+    try {
+      if (!votingName.trim()) {
+        throw new Error("Please enter a voting name");
+      }
+      if (!votingStartTime) {
+        throw new Error("Please select a start time");
+      }
+
+      setCreateLoading(true);
+      setStatus("Creating voting...");
+
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const factory = new ethers.Contract(
+        votingFactoryAddress,
+        VotingFactoryABI.abi,
+        signer
+      );
+
+      // Convert inputs
+      const depositAmount = ethers.parseUnits(voteDeposit, 6);
+      const startTimeUnix = Math.floor(new Date(votingStartTime).getTime() / 1000);
+      const durationSeconds = Number(votingDuration);
+
+      const tx = await factory.createVoting(
+        votingName,
+        depositAmount,
+        startTimeUnix,
+        durationSeconds
+      );
+
+      setStatus(`⏳ Creating voting: ${tx.hash}`);
+      const receipt = await tx.wait();
+      
+      // Extract the voting address from events
+      const event = receipt.logs.find(log => {
+        try {
+          const parsed = factory.interface.parseLog(log);
+          return parsed.name === "VotingCreated";
+        } catch {
+          return false;
+        }
+      });
+
+      if (event) {
+        const parsed = factory.interface.parseLog(event);
+        const newVotingAddress = parsed.args.votingAddress;
+        
+        // Store custom options in localStorage
+        const customOptions = {
+          0: optionA,
+          1: optionB,
+          2: optionC
+        };
+        localStorage.setItem(`voting_options_${newVotingAddress}`, JSON.stringify(customOptions));
+        
+        setStatus(`✅ Voting created at: ${newVotingAddress}`);
+      } else {
+        setStatus("✅ Voting created successfully!");
+      }
+
+      // Reset form
+      setVotingName("");
+      setVotingStartTime("");
+      setOptionA({ emoji: "🎯", label: "Option A", description: "Moderate Growth - $4,000" });
+      setOptionB({ emoji: "🚀", label: "Option B", description: "Moon Shot - $10,000" });
+      setOptionC({ emoji: "📉", label: "Option C", description: "Bear Market - $2,000" });
+      
+      // Reload votings list and switch to votings tab
+      console.log("🔄 Reloading votings list...");
+      await loadAllVotings();
+      setActiveTab("votings");
+    } catch (err) {
+      console.error("❌ Create Voting Error:", err);
+      setStatus(`❌ Failed to create voting: ${err.message || err.reason}`);
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  // Load voting data for a specific voting contract
+  const loadVotingData = async (votingAddress = selectedVoting) => {
+    if (!votingAddress) return;
     try {
       if (!userAddress) return;
 
       const provider = new ethers.BrowserProvider(window.ethereum);
       const votingContract = new ethers.Contract(
-        votingContractAddress,
+        votingAddress,
         PrivateVotingABI.abi,
         provider
       );
@@ -191,6 +383,16 @@ export default function ZamaVotingPage() {
         }
       }
 
+      // Load custom options from localStorage if available
+      const storedOptions = localStorage.getItem(`voting_options_${votingAddress}`);
+      if (storedOptions) {
+        try {
+          data.customOptions = JSON.parse(storedOptions);
+        } catch (e) {
+          console.error("Failed to parse stored options:", e);
+        }
+      }
+
       setVotingData(data);
       setUsdcBalance(ethers.formatUnits(usdcBal, 6));
       console.log("✅ Voting data loaded:", data);
@@ -250,23 +452,25 @@ export default function ZamaVotingPage() {
         signer
       );
       
-      const allowance = await usdcContract.allowance(userAddress, votingContractAddress);
-      const requiredAmount = ethers.parseUnits("10", 6);
+      if (!selectedVoting) throw new Error("No voting selected");
+      
+      const allowance = await usdcContract.allowance(userAddress, selectedVoting);
+      const requiredAmount = ethers.parseUnits(votingData?.depositAmount || "10", 6);
       
       if (allowance < requiredAmount) {
         setStatus("Approving USDC...");
-        const approveTx = await usdcContract.approve(votingContractAddress, requiredAmount);
+        const approveTx = await usdcContract.approve(selectedVoting, requiredAmount);
         await approveTx.wait();
       }
 
       setStatus("Encrypting your vote...");
-      const buffer = instance.createEncryptedInput(votingContractAddress, userAddress);
+      const buffer = instance.createEncryptedInput(selectedVoting, userAddress);
       buffer.add8(selectedOption);
       
       const ciphertexts = await buffer.encrypt();
 
       const votingContract = new ethers.Contract(
-        votingContractAddress,
+        selectedVoting,
         PrivateVotingABI.abi,
         signer
       );
@@ -294,13 +498,15 @@ export default function ZamaVotingPage() {
   // Request vote decryption - separate step before claiming
   const handleRequestDecryption = async () => {
     try {
+      if (!selectedVoting) throw new Error("No voting selected");
+      
       setVotingLoading(true);
       setStatus("🔐 Requesting vote decryption...");
 
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const votingContract = new ethers.Contract(
-        votingContractAddress,
+        selectedVoting,
         PrivateVotingABI.abi,
         signer
       );
@@ -341,10 +547,12 @@ export default function ZamaVotingPage() {
     try {
       setVotingLoading(true);
 
+      if (!selectedVoting) throw new Error("No voting selected");
+      
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const votingContract = new ethers.Contract(
-        votingContractAddress,
+        selectedVoting,
         PrivateVotingABI.abi,
         signer
       );
@@ -374,24 +582,37 @@ export default function ZamaVotingPage() {
     }
   };
 
-  // Load voting data on mount
+  // Load votings list on tab change
   useEffect(() => {
-    if (userAddress && instance) {
+    if (userAddress && activeTab === "votings") {
+      loadAllVotings();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userAddress, activeTab]);
+
+  // Load voting data when a voting is selected
+  useEffect(() => {
+    if (selectedVoting && userAddress && instance) {
       loadVotingData();
-      const interval = setInterval(loadVotingData, 30000);
+      const interval = setInterval(() => loadVotingData(), 30000);
       return () => clearInterval(interval);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userAddress, instance]);
+  }, [selectedVoting, userAddress, instance]);
 
   // Helper functions
   const getOptionInfo = (option) => {
+    // Try to get custom options from the voting data first, otherwise use defaults
+    if (votingData?.customOptions) {
+      return votingData.customOptions[option];
+    }
+    
     const options = {
-      0: { emoji: "🎯", label: "Option A", price: "$4,000", desc: "Moderate Growth" },
-      1: { emoji: "🚀", label: "Option B", price: "$10,000", desc: "Moon Shot" },
-      2: { emoji: "📉", label: "Option C", price: "$2,000", desc: "Bear Market" }
+      0: optionA,
+      1: optionB,
+      2: optionC
     };
-    return options[option];
+    return options[option] || optionA;
   };
 
   const getRankInfo = (option) => {
@@ -416,11 +637,11 @@ export default function ZamaVotingPage() {
           <div className="flex items-center justify-center gap-3 mb-4">
             <Vote className="h-10 w-10 text-purple-600" />
             <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600">
-              Private Voting Game
+              Zama Private Voting
             </h1>
           </div>
           <p className="text-xl font-semibold text-muted-foreground max-w-2xl mx-auto">
-            What will Ethereum price be at the end of 2026?
+            Create and participate in fully encrypted voting rounds
           </p>
         </motion.div>
 
@@ -429,7 +650,7 @@ export default function ZamaVotingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="max-w-4xl mx-auto mb-8"
+          className="max-w-6xl mx-auto mb-8"
         >
           <Card className="border-2">
             <CardContent className="pt-6">
@@ -442,461 +663,605 @@ export default function ZamaVotingPage() {
         </motion.div>
 
         {instance ? (
-          <div className="max-w-5xl mx-auto space-y-6">
-            {/* Mint USDC Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-            >
-              <Card className="border-2 bg-gradient-to-br from-green-500/10 to-emerald-600/5">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-green-600" />
-                    Get Test USDC
-                  </CardTitle>
-                  <CardDescription>
-                    Your USDC Balance: {usdcBalance} USDC
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button
-                    onClick={handleMintUSDC}
-                    disabled={votingLoading}
-                    size="lg"
-                    className="w-full bg-green-600 hover:bg-green-700"
-                  >
-                    {votingLoading ? (
-                      <>
-                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        Minting...
-                      </>
-                    ) : (
-                      <>
-                        <DollarSign className="mr-2 h-4 w-4" />
-                        Mint 1000 USDC (Test)
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
+          <div className="max-w-6xl mx-auto">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 mb-8">
+                <TabsTrigger value="votings" className="text-lg">
+                  <List className="mr-2 h-5 w-5" />
+                  View Votings
+                </TabsTrigger>
+                <TabsTrigger value="vote" className="text-lg" disabled={!selectedVoting}>
+                  <Vote className="mr-2 h-5 w-5" />
+                  {selectedVoting ? "Voting Details" : "Select a Voting"}
+                </TabsTrigger>
+                <TabsTrigger value="create" className="text-lg">
+                  <Plus className="mr-2 h-5 w-5" />
+                  Create Voting
+                </TabsTrigger>
+              </TabsList>
 
-            {/* PHASE 1: Voting Active */}
-            <AnimatePresence mode="wait">
-              {votingData && !votingData.resultsRevealed && (
+              {/* TAB 1: View Votings */}
+              <TabsContent value="votings" className="space-y-6">
                 <motion.div
-                  key="voting-phase"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.6 }}
-                  className="space-y-6"
+                  transition={{ duration: 0.4 }}
                 >
-                  {/* Stats */}
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <Card className="border-2">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4" />
-                          Total Pool
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold text-purple-600">
-                          {votingData.totalVotingUSDC} USDC
+                  {/* Header with Refresh Button */}
+                  <Card className="border-2 mb-6">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            <List className="h-5 w-5" />
+                            All Votings
+                          </CardTitle>
+                          <CardDescription>
+                            Browse and participate in voting rounds
+                          </CardDescription>
                         </div>
-                      </CardContent>
-                    </Card>
-                    <Card className="border-2">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          Time Remaining
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold text-blue-600">
-                          {Math.floor(votingData.timeRemaining / 3600)}h {Math.floor((votingData.timeRemaining % 3600) / 60)}m
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card className="border-2">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                          <Shield className="h-4 w-4" />
-                          Status
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold text-orange-600">
-                          🔒 Active
-                        </div>
-                      </CardContent>
-                    </Card>
+                        <Button 
+                          onClick={loadAllVotings} 
+                          disabled={listLoading}
+                          className="shrink-0"
+                        >
+                          {listLoading ? "Loading..." : "Refresh"}
+                        </Button>
+                      </div>
+                    </CardHeader>
+                  </Card>
+
+                  {/* 3-Column Layout */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Column 1: Active Votings */}
+                    <div className="space-y-4">
+                      <Card className="border-2 border-green-500 sticky top-4">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center gap-2 text-green-600 text-lg">
+                            <CheckCircle className="h-5 w-5" />
+                            Active ({ongoingVotings.length})
+                          </CardTitle>
+                        </CardHeader>
+                      </Card>
+                      
+                      <div className="space-y-3">
+                        {ongoingVotings.length > 0 ? (
+                          ongoingVotings.map((voting) => (
+                            <Card 
+                              key={voting.address} 
+                              className="border-2 border-green-500/50 cursor-pointer hover:border-green-500 hover:shadow-lg transition-all"
+                              onClick={() => {
+                                setSelectedVoting(voting.address);
+                                setActiveTab("vote");
+                              }}
+                            >
+                              <CardContent className="pt-4 pb-4">
+                                <div className="space-y-2">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <h3 className="font-bold text-base line-clamp-2">{voting.name}</h3>
+                                    <span className="px-2 py-1 bg-green-500/20 text-green-600 rounded-full text-xs font-semibold shrink-0">
+                                      Live
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground">
+                                      💰 {voting.depositAmount} USDC
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      ⏰ Ends: {new Date(voting.endTime * 1000).toLocaleDateString()} {new Date(voting.endTime * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                    </p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))
+                        ) : (
+                          <Card className="border-dashed">
+                            <CardContent className="pt-8 pb-8 text-center">
+                              <p className="text-sm text-muted-foreground">No active votings</p>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Column 2: Upcoming Votings */}
+                    <div className="space-y-4">
+                      <Card className="border-2 border-blue-500 sticky top-4">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center gap-2 text-blue-600 text-lg">
+                            <Calendar className="h-5 w-5" />
+                            Upcoming ({upcomingVotings.length})
+                          </CardTitle>
+                        </CardHeader>
+                      </Card>
+                      
+                      <div className="space-y-3">
+                        {upcomingVotings.length > 0 ? (
+                          upcomingVotings.map((voting) => (
+                            <Card 
+                              key={voting.address} 
+                              className="border-2 border-blue-500/50 cursor-pointer hover:border-blue-500 hover:shadow-lg transition-all"
+                              onClick={() => {
+                                setSelectedVoting(voting.address);
+                                setActiveTab("vote");
+                              }}
+                            >
+                              <CardContent className="pt-4 pb-4">
+                                <div className="space-y-2">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <h3 className="font-bold text-base line-clamp-2">{voting.name}</h3>
+                                    <span className="px-2 py-1 bg-blue-500/20 text-blue-600 rounded-full text-xs font-semibold shrink-0">
+                                      Soon
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground">
+                                      💰 {voting.depositAmount} USDC
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      🚀 Starts: {new Date(voting.startTime * 1000).toLocaleDateString()} {new Date(voting.startTime * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                    </p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))
+                        ) : (
+                          <Card className="border-dashed">
+                            <CardContent className="pt-8 pb-8 text-center">
+                              <p className="text-sm text-muted-foreground">No upcoming votings</p>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Column 3: Past Votings */}
+                    <div className="space-y-4">
+                      <Card className="border-2 sticky top-4">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <XCircle className="h-5 w-5" />
+                            Past ({endedVotings.length})
+                          </CardTitle>
+                        </CardHeader>
+                      </Card>
+                      
+                      <div className="space-y-3">
+                        {endedVotings.length > 0 ? (
+                          endedVotings.map((voting) => (
+                            <Card 
+                              key={voting.address} 
+                              className="border cursor-pointer hover:border-purple-500 hover:shadow-lg transition-all opacity-90"
+                              onClick={() => {
+                                setSelectedVoting(voting.address);
+                                setActiveTab("vote");
+                              }}
+                            >
+                              <CardContent className="pt-4 pb-4">
+                                <div className="space-y-2">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <h3 className="font-bold text-base line-clamp-2">{voting.name}</h3>
+                                    <div className="flex flex-col gap-1">
+                                      <span className="px-2 py-1 bg-gray-500/20 text-gray-600 rounded-full text-xs font-semibold">
+                                        Ended
+                                      </span>
+                                      {voting.resolved && voting.revealed && (
+                                        <span className="px-2 py-1 bg-purple-500/20 text-purple-600 rounded-full text-xs font-semibold">
+                                          Results
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground">
+                                      💰 {voting.depositAmount} USDC
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      🏁 Ended: {new Date(voting.endTime * 1000).toLocaleDateString()} {new Date(voting.endTime * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                    </p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))
+                        ) : (
+                          <Card className="border-dashed">
+                            <CardContent className="pt-8 pb-8 text-center">
+                              <p className="text-sm text-muted-foreground">No past votings</p>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Voting UI */}
-                  {!votingData.hasVoted ? (
+                  {/* Empty State - Only show if ALL categories are empty */}
+                  {!listLoading && ongoingVotings.length === 0 && upcomingVotings.length === 0 && endedVotings.length === 0 && (
+                    <Card className="border-2 mt-6">
+                      <CardContent className="pt-12 pb-12 text-center">
+                        <p className="text-lg text-muted-foreground">No votings found. Create one to get started! 🚀</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </motion.div>
+              </TabsContent>
+
+              {/* TAB 2: Vote - Voting Details & Options */}
+              <TabsContent value="vote" className="space-y-6">
+                {selectedVoting && votingData ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="space-y-6"
+                  >
+                    {/* USDC Balance & Mint Card */}
+                    <Card className="border-2 border-blue-500">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="flex items-center gap-2">
+                              <DollarSign className="h-5 w-5" />
+                              Your USDC Balance
+                            </CardTitle>
+                            <CardDescription>Mock USDC for testing on Sepolia</CardDescription>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-3xl font-bold text-blue-600">{usdcBalance}</p>
+                            <p className="text-sm text-muted-foreground">USDC</p>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <Button 
+                          onClick={handleMintUSDC}
+                          disabled={votingLoading}
+                          className="w-full"
+                          variant="outline"
+                        >
+                          {votingLoading ? "Minting..." : "🪙 Mint 1000 USDC (Free)"}
+                        </Button>
+                        <p className="text-xs text-center text-muted-foreground mt-2">
+                          Get free test USDC to participate in votings
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    {/* Voting Info Card */}
+                    <Card className="border-2">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-2xl">{votingData.name}</CardTitle>
+                            <CardDescription>Contract: {selectedVoting}</CardDescription>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => {
+                              setSelectedVoting(null);
+                              setActiveTab("votings");
+                            }}
+                          >
+                            ← Back to List
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">Total Pool</p>
+                            <p className="text-2xl font-bold">{votingData.totalVotingUSDC} USDC</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Time Remaining</p>
+                            <p className="text-xl font-semibold">
+                              {votingData.timeRemaining > 0 
+                                ? `${Math.floor(votingData.timeRemaining / 3600)}h ${Math.floor((votingData.timeRemaining % 3600) / 60)}m`
+                                : "Ended"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Your Status</p>
+                            <p className="text-sm font-semibold">
+                              {votingData.hasVoted ? "✅ Voted" : "⏳ Not Voted"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Results</p>
+                            <p className="text-sm font-semibold">
+                              {votingData.resultsRevealed ? "✅ Revealed" : "🔒 Hidden"}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Voting Options Card */}
                     <Card className="border-2">
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <Vote className="h-5 w-5" />
-                          Cast Your Vote (10 USDC)
+                          Voting Options
                         </CardTitle>
                         <CardDescription>
-                          Select your prediction and deposit 10 USDC. Your vote is fully encrypted!
+                          {votingData.resultsRevealed 
+                            ? "Results are revealed - see vote counts below" 
+                            : votingData.hasVoted 
+                              ? "You have already cast your vote" 
+                              : "Select an option to cast your vote"}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <div className="grid gap-4 md:grid-cols-3">
-                          {[0, 1, 2].map((option) => {
-                            const info = getOptionInfo(option);
-                            return (
-                              <Card
-                                key={option}
-                                className={`border-2 cursor-pointer transition-all hover:scale-105 ${
-                                  selectedOption === option
-                                    ? "border-purple-600 bg-purple-500/10 shadow-lg"
-                                    : "border-muted hover:border-purple-400"
-                                }`}
-                                onClick={() => setSelectedOption(option)}
-                              >
-                                <CardContent className="pt-6 text-center">
-                                  <div className="text-4xl mb-2">{info.emoji}</div>
-                                  <div className="text-xl font-bold mb-1">{info.label}</div>
-                                  <div className="text-2xl font-bold text-purple-600 mb-1">{info.price}</div>
-                                  <div className="text-sm text-muted-foreground">{info.desc}</div>
-                                </CardContent>
-                              </Card>
-                            );
-                          })}
-                        </div>
-
-                        <Button
-                          onClick={handleVote}
-                          disabled={selectedOption === null || votingLoading}
-                          size="lg"
-                          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                        >
-                          {votingLoading ? (
-                            <>
-                              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                              Processing...
-                            </>
-                          ) : (
-                            <>
-                              <Vote className="mr-2 h-4 w-4" />
-                              Submit Encrypted Vote & Deposit 10 USDC
-                            </>
-                          )}
-                        </Button>
+                        {[0, 1, 2].map((option) => {
+                          const optionInfo = getOptionInfo(option);
+                          const rankInfo = votingData.resultsRevealed ? getRankInfo(option) : null;
+                          const voteCount = votingData.resultsRevealed ? 
+                            (option === 0 ? votingData.votesA : option === 1 ? votingData.votesB : votingData.votesC) : null;
+                          
+                          return (
+                            <motion.div
+                              key={option}
+                              whileHover={{ scale: !votingData.hasVoted && votingData.timeRemaining > 0 ? 1.02 : 1 }}
+                              className={`p-6 border-2 rounded-lg cursor-pointer transition-all ${
+                                selectedOption === option ? "border-purple-500 bg-purple-500/10" : "border-border"
+                              } ${rankInfo ? rankInfo.bgColor : ""}`}
+                              onClick={() => !votingData.hasVoted && votingData.timeRemaining > 0 && setSelectedOption(option)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                  <span className="text-4xl">{optionInfo.emoji}</span>
+                                  <div>
+                                    <h3 className="text-xl font-bold">{optionInfo.label}</h3>
+                                    <p className="text-sm text-muted-foreground">{optionInfo.description}</p>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-2">
+                                  {rankInfo && (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-2xl">{rankInfo.emoji}</span>
+                                      <span className={`font-bold ${rankInfo.color}`}>{rankInfo.label}</span>
+                                    </div>
+                                  )}
+                                  {voteCount !== null && (
+                                    <p className="text-lg font-semibold">{voteCount} votes</p>
+                                  )}
+                                </div>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
                       </CardContent>
                     </Card>
-                  ) : (
-                    <div className="space-y-6">
-                      <Card className="border-2 border-green-500 bg-green-500/10">
-                        <CardContent className="pt-6 text-center py-12">
-                          <div className="text-6xl mb-4">✅</div>
-                          <h3 className="text-2xl font-bold mb-2">Vote Submitted!</h3>
-                          <p className="text-muted-foreground">
-                            Your vote is encrypted and will be revealed when voting ends
+
+                    {/* Action Buttons */}
+                    {!votingData.hasVoted && votingData.timeRemaining > 0 && (
+                      <Card className="border-2 border-purple-500">
+                        <CardContent className="pt-6">
+                          <Button 
+                            onClick={handleVote}
+                            disabled={selectedOption === null || votingLoading}
+                            className="w-full"
+                            size="lg"
+                          >
+                            {votingLoading ? "Processing..." : `Vote for ${selectedOption !== null ? getOptionInfo(selectedOption).label : "Option"}`}
+                          </Button>
+                          <p className="text-xs text-center text-muted-foreground mt-2">
+                            Your USDC balance: {usdcBalance} USDC
                           </p>
-                          <div className="mt-4 text-sm text-muted-foreground">
-                            ⏰ Voting ends in {Math.floor(votingData.timeRemaining / 3600)}h {Math.floor((votingData.timeRemaining % 3600) / 60)}m
-                          </div>
                         </CardContent>
                       </Card>
+                    )}
 
-                      {/* Show user's encrypted vote */}
-                      <Card className="border-2 bg-gradient-to-br from-purple-500/10 to-pink-600/5">
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <Shield className="h-5 w-5 text-purple-600" />
-                            Your Encrypted Vote
-                          </CardTitle>
-                          <CardDescription>
-                            Your vote is secured by FHE encryption. It will be revealed after voting ends.
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="p-6 bg-muted/50 rounded-lg text-center space-y-4">
-                            <div className="text-5xl">🔐</div>
-                            <div>
-                              <div className="text-lg font-bold mb-2">Vote Status: Encrypted</div>
-                              <div className="text-sm text-muted-foreground">
-                                Your selection has been recorded on-chain with full privacy protection
-                              </div>
-                            </div>
-                            <div className="pt-4 border-t space-y-2">
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">Deposit:</span>
-                                <span className="font-bold">10 USDC</span>
-                              </div>
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">Status:</span>
-                                <span className="font-bold text-green-600">Confirmed</span>
-                              </div>
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">Reveal Time:</span>
-                                <span className="font-bold">{Math.floor(votingData.timeRemaining / 3600)}h {Math.floor((votingData.timeRemaining % 3600) / 60)}m</span>
-                              </div>
-                            </div>
-                          </div>
+                    {votingData.votingResolved && !votingData.hasClaimedReward && votingData.hasVoted && (
+                      <Card className="border-2 border-green-500">
+                        <CardContent className="pt-6">
+                          <Button 
+                            onClick={handleClaimReward}
+                            disabled={votingLoading}
+                            className="w-full"
+                            size="lg"
+                          >
+                            {votingLoading ? "Claiming..." : "Claim Your Reward"}
+                          </Button>
                         </CardContent>
                       </Card>
-
-                      {/* Voting Instructions */}
-                      <Card className="border-2">
-                        <CardHeader>
-                          <CardTitle className="text-sm font-medium">What Happens Next?</CardTitle>
-                        </CardHeader>
-                        <CardContent className="text-sm text-muted-foreground space-y-2">
-                          <div className="flex items-start gap-2">
-                            <span className="text-lg">⏳</span>
-                            <div>
-                              <strong className="text-foreground">Wait for voting to end</strong>
-                              <p>The voting period will close automatically after the timer expires</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="text-lg">🔓</span>
-                            <div>
-                              <strong className="text-foreground">Votes are revealed</strong>
-                              <p>All votes will be decrypted and the results will be published on-chain</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="text-lg">🎁</span>
-                            <div>
-                              <strong className="text-foreground">Claim your reward</strong>
-                              <p>Come back to this page to see if you won and claim your USDC reward</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-
-              {/* PHASE 2: Results Revealed */}
-              {votingData && votingData.resultsRevealed && votingData.votingResolved && (
-                <motion.div
-                  key="results-phase"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.6 }}
-                  className="space-y-6"
-                >
-                  {/* Results Header */}
-                  <Card className="border-2 bg-gradient-to-br from-yellow-500/10 to-orange-600/5">
-                    <CardContent className="pt-6 text-center">
-                      <div className="text-6xl mb-4">🎉</div>
-                      <h2 className="text-3xl font-bold mb-2">Voting Has Ended!</h2>
-                      <p className="text-muted-foreground">
-                        Results are now public. Check if you won!
-                      </p>
+                    )}
+                  </motion.div>
+                ) : (
+                  <Card className="border-2">
+                    <CardContent className="pt-12 pb-12 text-center">
+                      <p className="text-muted-foreground">Select a voting from the list to view details</p>
                     </CardContent>
                   </Card>
+                )}
+              </TabsContent>
 
-                  {/* Vote Results */}
+              {/* TAB 3: Create Voting */}
+              <TabsContent value="create" className="space-y-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                >
                   <Card className="border-2">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <Trophy className="h-5 w-5 text-yellow-600" />
-                        Final Results
+                        <Plus className="h-5 w-5" />
+                        Create New Voting Round
                       </CardTitle>
                       <CardDescription>
-                        Total Pool: {votingData.totalVotingUSDC} USDC
+                        Set up a new private voting session with custom parameters
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-3">
-                      {[0, 1, 2].map((option) => {
-                        const info = getOptionInfo(option);
-                        const rank = getRankInfo(option);
-                        const votes = option === 0 ? votingData.votesA : option === 1 ? votingData.votesB : votingData.votesC;
+                    <CardContent className="space-y-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Voting Name</Label>
+                        <Input
+                          id="name"
+                          placeholder="e.g., ETH Price Prediction 2026"
+                          value={votingName}
+                          onChange={(e) => setVotingName(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="deposit">Vote Deposit Amount (USDC)</Label>
+                        <Input
+                          id="deposit"
+                          type="number"
+                          step="0.01"
+                          placeholder="10"
+                          value={voteDeposit}
+                          onChange={(e) => setVoteDeposit(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Amount each participant must deposit to vote
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="startTime">Start Time</Label>
+                        <Input
+                          id="startTime"
+                          type="datetime-local"
+                          value={votingStartTime}
+                          onChange={(e) => setVotingStartTime(e.target.value)}
+                          min={new Date().toISOString().slice(0, 16)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="duration">Voting Duration (seconds)</Label>
+                        <Input
+                          id="duration"
+                          type="number"
+                          placeholder="3600"
+                          value={votingDuration}
+                          onChange={(e) => setVotingDuration(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          3600 = 1 hour, 86400 = 1 day, 604800 = 1 week
+                        </p>
+                      </div>
+
+                      {/* Voting Options Configuration */}
+                      <div className="space-y-4 pt-4 border-t">
+                        <Label className="text-base font-semibold">Configure Voting Options</Label>
                         
-                        return (
-                          <div
-                            key={option}
-                            className={`flex items-center justify-between p-4 rounded-lg border-2 ${rank?.bgColor || 'bg-muted/50'}`}
-                          >
-                            <div className="flex items-center gap-4">
-                              <div className="text-4xl">{info.emoji}</div>
-                              <div>
-                                <div className="font-semibold text-lg">
-                                  {info.label}: {info.price}
-                                </div>
-                                <div className="text-sm text-muted-foreground">{info.desc}</div>
-                                {rank && (
-                                  <div className={`text-sm font-bold ${rank.color} flex items-center gap-1 mt-1`}>
-                                    <span>{rank.emoji}</span>
-                                    <span>{rank.label}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-3xl font-bold text-purple-600">
-                                {votes}
-                              </div>
-                              <div className="text-sm text-muted-foreground">votes</div>
-                            </div>
+                        {/* Option A */}
+                        <div className="space-y-2 p-4 border rounded-lg">
+                          <Label className="font-semibold">Option A</Label>
+                          <div className="grid grid-cols-3 gap-2">
+                            <Input
+                              placeholder="🎯"
+                              value={optionA.emoji}
+                              onChange={(e) => setOptionA({...optionA, emoji: e.target.value})}
+                              className="text-center"
+                              maxLength={2}
+                            />
+                            <Input
+                              placeholder="Label"
+                              value={optionA.label}
+                              onChange={(e) => setOptionA({...optionA, label: e.target.value})}
+                            />
+                            <Input
+                              placeholder="Description"
+                              value={optionA.description}
+                              onChange={(e) => setOptionA({...optionA, description: e.target.value})}
+                              className="col-span-1"
+                            />
                           </div>
-                        );
-                      })}
+                        </div>
+
+                        {/* Option B */}
+                        <div className="space-y-2 p-4 border rounded-lg">
+                          <Label className="font-semibold">Option B</Label>
+                          <div className="grid grid-cols-3 gap-2">
+                            <Input
+                              placeholder="🚀"
+                              value={optionB.emoji}
+                              onChange={(e) => setOptionB({...optionB, emoji: e.target.value})}
+                              className="text-center"
+                              maxLength={2}
+                            />
+                            <Input
+                              placeholder="Label"
+                              value={optionB.label}
+                              onChange={(e) => setOptionB({...optionB, label: e.target.value})}
+                            />
+                            <Input
+                              placeholder="Description"
+                              value={optionB.description}
+                              onChange={(e) => setOptionB({...optionB, description: e.target.value})}
+                              className="col-span-1"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Option C */}
+                        <div className="space-y-2 p-4 border rounded-lg">
+                          <Label className="font-semibold">Option C</Label>
+                          <div className="grid grid-cols-3 gap-2">
+                            <Input
+                              placeholder="📉"
+                              value={optionC.emoji}
+                              onChange={(e) => setOptionC({...optionC, emoji: e.target.value})}
+                              className="text-center"
+                              maxLength={2}
+                            />
+                            <Input
+                              placeholder="Label"
+                              value={optionC.label}
+                              onChange={(e) => setOptionC({...optionC, label: e.target.value})}
+                            />
+                            <Input
+                              placeholder="Description"
+                              value={optionC.description}
+                              onChange={(e) => setOptionC({...optionC, description: e.target.value})}
+                              className="col-span-1"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <Button
+                        onClick={handleCreateVoting}
+                        disabled={createLoading || !votingName || !votingStartTime}
+                        size="lg"
+                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600"
+                      >
+                        {createLoading ? (
+                          <>
+                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            Creating...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            Create Voting Round
+                          </>
+                        )}
+                      </Button>
                     </CardContent>
                   </Card>
 
-                  {/* Your Vote & Claim */}
-                  {votingData.hasVoted && (
-                    <Card className="border-2 bg-gradient-to-br from-purple-500/10 to-pink-600/5">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Award className="h-5 w-5 text-purple-600" />
-                          Your Participation
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        {votingData.voteDecrypted && votingData.userDecryptedVote !== undefined && (
-                          <div className="p-4 bg-muted/50 rounded-lg space-y-3">
-                            <div className="text-sm text-muted-foreground">Your Vote:</div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-3xl">{getOptionInfo(votingData.userDecryptedVote).emoji}</span>
-                              <div>
-                                <div className="font-bold text-lg">
-                                  {getOptionInfo(votingData.userDecryptedVote).label} - {getOptionInfo(votingData.userDecryptedVote).price}
-                                </div>
-                                {getRankInfo(votingData.userDecryptedVote) && (
-                                  <div className={`text-sm font-bold ${getRankInfo(votingData.userDecryptedVote).color}`}>
-                                    {getRankInfo(votingData.userDecryptedVote).emoji} {getRankInfo(votingData.userDecryptedVote).label}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            
-                            {/* Reward Status */}
-                            {votingData.userRewardAmount !== undefined && (
-                              <div className="pt-3 border-t">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm text-muted-foreground">Your Reward:</span>
-                                  <div className="text-right">
-                                    {votingData.userRewardAmount === 0 ? (
-                                      <div className="text-lg font-bold text-red-600">0 USDC 💔</div>
-                                    ) : votingData.userRewardAmount === 9.8 ? (
-                                      <div className="text-lg font-bold text-yellow-600">{votingData.userRewardAmount.toFixed(1)} USDC 🔄</div>
-                                    ) : (
-                                      <div className="text-lg font-bold text-green-600">{votingData.userRewardAmount.toFixed(1)} USDC 🎉</div>
-                                    )}
-                                    <div className="text-xs text-muted-foreground">
-                                      {votingData.userRewardAmount === 0 && "Lost"}
-                                      {votingData.userRewardAmount === 9.8 && "Refunded"}
-                                      {votingData.userRewardAmount > 9.8 && `Won ${((votingData.userRewardAmount / 9.8) * 100).toFixed(0)}%!`}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {!votingData.hasClaimedReward ? (
-                          <>
-                            {votingData.userRewardAmount === 0 ? (
-                              // No reward - show message instead of claim button
-                              <Card className="border-2 border-red-500 bg-red-500/10">
-                                <CardContent className="pt-6 text-center">
-                                  <div className="text-5xl mb-3">😢</div>
-                                  <p className="text-lg font-semibold text-red-600">
-                                    No Reward Available
-                                  </p>
-                                  <p className="text-sm text-muted-foreground mt-2">
-                                    You voted with the majority and lost your deposit. Better luck next time!
-                                  </p>
-                                </CardContent>
-                              </Card>
-                            ) : (
-                              <div className="space-y-3">
-                                {!votingData.voteDecrypted ? (
-                                  <Button
-                                    onClick={handleRequestDecryption}
-                                    disabled={votingLoading}
-                                    size="lg"
-                                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                                  >
-                                    {votingLoading ? (
-                                      <>
-                                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                        Processing...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Shield className="mr-2 h-4 w-4" />
-                                        Step 1: Request Vote Decryption
-                                      </>
-                                    )}
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    onClick={handleClaimReward}
-                                    disabled={votingLoading}
-                                    size="lg"
-                                    className="w-full bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700"
-                                  >
-                                    {votingLoading ? (
-                                      <>
-                                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                        Processing...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Trophy className="mr-2 h-4 w-4" />
-                                        {votingData.userRewardAmount === 9.8 
-                                          ? 'Step 2: Claim Refund (9.8 USDC)' 
-                                          : `Step 2: Claim Reward (${votingData.userRewardAmount?.toFixed(1)} USDC)`
-                                        }
-                                      </>
-                                    )}
-                                  </Button>
-                                )}
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <Card className="border-2 border-green-500 bg-green-500/10">
-                            <CardContent className="pt-6 text-center">
-                              <div className="text-5xl mb-3">✅</div>
-                              <p className="text-lg font-semibold text-green-600">
-                                Reward Claimed!
-                              </p>
-                              <p className="text-sm text-muted-foreground mt-2">
-                                Thank you for participating!
-                              </p>
-                            </CardContent>
-                          </Card>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Game Rules Reminder */}
+                  {/* Info Card */}
                   <Card className="border-2">
                     <CardHeader>
-                      <CardTitle className="text-sm font-medium">Game Rules</CardTitle>
+                      <CardTitle className="text-sm">ℹ️ How It Works</CardTitle>
                     </CardHeader>
                     <CardContent className="text-sm text-muted-foreground space-y-2">
-                      <div>🏆 <strong>Minority (Fewest votes):</strong> Wins 2x their deposit</div>
-                      <div>🥈 <strong>Middle:</strong> Gets their deposit back (1x)</div>
-                      <div>❌ <strong>Majority (Most votes):</strong> Loses their deposit (0x)</div>
-                      <div className="pt-2 border-t">
-                        💡 <strong>Strategy:</strong> Pick the option you think OTHERS wont pick!
-                      </div>
+                      <p>• Participants vote by depositing USDC and selecting an encrypted option</p>
+                      <p>• After voting ends, results are revealed through FHE decryption</p>
+                      <p>• Rewards are distributed based on voting patterns (minority wins!)</p>
+                      <p>• All votes remain encrypted until the round ends</p>
                     </CardContent>
                   </Card>
                 </motion.div>
-              )}
-            </AnimatePresence>
+              </TabsContent>
+            </Tabs>
           </div>
         ) : (
           <motion.div
