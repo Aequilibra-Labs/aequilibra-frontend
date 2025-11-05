@@ -54,11 +54,26 @@ export default function ZamaVotingPage() {
 
   // === Initialize the Zama SDK ===
   useEffect(() => {
+    // Only run on client-side
+    if (typeof window === 'undefined') return;
+    
     const initZama = async () => {
       try {
+        // Check for browser environment first
+        if (!window.ethereum) {
+          setStatus("❌ Please install MetaMask to use this app");
+          return;
+        }
+
+        setStatus("Loading Zama SDK...");
         const response = await fetch(
           "https://cdn.zama.ai/relayer-sdk-js/0.2.0/relayer-sdk-js.js"
         );
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch SDK: ${response.status}`);
+        }
+        
         const text = await response.text();
 
         const utf8Bytes = new TextEncoder().encode(text);
@@ -84,7 +99,7 @@ export default function ZamaVotingPage() {
         await new Promise((resolve, reject) => {
           const timeout = setTimeout(
             () => reject(new Error("Zama SDK load timeout")),
-            10000
+            15000
           );
           window.addEventListener("zama-ready", () => {
             clearTimeout(timeout);
@@ -95,15 +110,17 @@ export default function ZamaVotingPage() {
         const { initSDK, createInstance, SepoliaConfig } = window.ZamaSDK || {};
         if (!initSDK) throw new Error("Zama SDK not loaded properly");
 
+        setStatus("Initializing SDK...");
         await initSDK();
 
-        if (!window.ethereum) throw new Error("MetaMask not detected");
+        setStatus("Connecting wallet...");
         const accounts = await window.ethereum.request({
           method: "eth_requestAccounts",
         });
         const userAddr = ethers.getAddress(accounts[0]);
         setUserAddress(userAddr);
 
+        setStatus("Creating FHE instance...");
         const config = { ...SepoliaConfig, network: window.ethereum };
         const instance = await createInstance(config);
         setInstance(instance);
@@ -111,11 +128,16 @@ export default function ZamaVotingPage() {
         setStatus("✅ SDK initialized successfully");
       } catch (err) {
         console.error("❌ Zama Init Error:", err);
-        setStatus(`❌ ${err.message}`);
+        setStatus(`❌ ${err.message || 'Failed to initialize SDK'}`);
       }
     };
 
-    initZama();
+    // Add a small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      initZama();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, []);
 
   // === FACTORY FUNCTIONS ===
@@ -584,6 +606,7 @@ export default function ZamaVotingPage() {
 
   // Load votings list on tab change
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     if (userAddress && activeTab === "votings") {
       loadAllVotings();
     }
@@ -592,6 +615,7 @@ export default function ZamaVotingPage() {
 
   // Load voting data when a voting is selected
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     if (selectedVoting && userAddress && instance) {
       loadVotingData();
       const interval = setInterval(() => loadVotingData(), 30000);
