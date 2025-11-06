@@ -55,54 +55,58 @@ export default function ZamaVotingPage() {
   useEffect(() => {
     const initZama = async () => {
       try {
-        const response = await fetch(
-          "https://cdn.zama.ai/relayer-sdk-js/0.2.0/relayer-sdk-js.js"
-        );
-        const text = await response.text();
-
-        const utf8Bytes = new TextEncoder().encode(text);
-        let binary = "";
-        const chunkSize = 0x8000;
-        for (let i = 0; i < utf8Bytes.length; i += chunkSize) {
-          binary += String.fromCharCode.apply(
-            null,
-            utf8Bytes.subarray(i, i + chunkSize)
-          );
-        }
-        const base64 = btoa(binary);
-
-        const script = document.createElement("script");
-        script.type = "module";
+        setStatus("🔄 Loading Zama FHE SDK...");
+        
+        // Use ESM CDN approach as recommended in the docs
+        const script = document.createElement('script');
+        script.type = 'module';
         script.textContent = `
-          import * as ZamaSDK from 'data:text/javascript;base64,${base64}';
-          window.ZamaSDK = ZamaSDK;
-          window.dispatchEvent(new Event('zama-ready'));
+          import {
+            initSDK,
+            createInstance,
+            SepoliaConfig,
+          } from 'https://cdn.zama.ai/relayer-sdk-js/0.2.0/relayer-sdk-js.js';
+
+          window.ZamaSDK = {
+            initSDK,
+            createInstance,
+            SepoliaConfig
+          };
+          window.dispatchEvent(new CustomEvent('zama-sdk-ready'));
         `;
         document.head.appendChild(script);
 
+        // Wait for the SDK to load
         await new Promise((resolve, reject) => {
-          const timeout = setTimeout(
-            () => reject(new Error("Zama SDK load timeout")),
-            10000
-          );
-          window.addEventListener("zama-ready", () => {
+          const timeout = setTimeout(() => {
+            reject(new Error("SDK loading timeout"));
+          }, 15000);
+          
+          window.addEventListener('zama-sdk-ready', () => {
             clearTimeout(timeout);
             resolve();
-          });
+          }, { once: true });
         });
-
-        const { initSDK, createInstance, SepoliaConfig } = window.ZamaSDK || {};
+        
+        const { initSDK, createInstance, SepoliaConfig } = window.ZamaSDK;
         if (!initSDK) throw new Error("Zama SDK not loaded properly");
-
+        
+        // Initialize the SDK first
         await initSDK();
+        setStatus("🔄 SDK loaded, connecting to wallet...");
 
+        // Check for MetaMask
         if (!window.ethereum) throw new Error("MetaMask not detected");
+        
+        // Request account access
         const accounts = await window.ethereum.request({
           method: "eth_requestAccounts",
         });
         const userAddr = ethers.getAddress(accounts[0]);
         setUserAddress(userAddr);
+        setStatus("🔄 Creating FHE instance...");
 
+        // Create FHE instance with Sepolia config
         const config = { ...SepoliaConfig, network: window.ethereum };
         const instance = await createInstance(config);
         setInstance(instance);
