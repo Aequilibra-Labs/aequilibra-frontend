@@ -22,7 +22,7 @@ export default function ZamaVotingPage() {
   // Create voting form state
   const [votingName, setVotingName] = useState("");
   const [voteDeposit, setVoteDeposit] = useState("10");
-  const [votingDuration, setVotingDuration] = useState("3600"); // 1 hour in seconds
+  const [votingDuration, setVotingDuration] = useState("300"); // 5 minutes in seconds (minimum)
   const [votingStartTime, setVotingStartTime] = useState("");
   const [createLoading, setCreateLoading] = useState(false);
   
@@ -46,34 +46,18 @@ export default function ZamaVotingPage() {
   const [votingLoading, setVotingLoading] = useState(false);
 
   // Deployed contract addresses
-  const votingFactoryAddress = "0x6D6BbdbB4Bb1C2361C45FC2548C20Da7EF822330";
+  const votingFactoryAddress = "0x3741Cee30e6cda6C666De42c41Dc471EbC6b091d";
   const usdcContractAddress = "0xffE01B10073099afafE2D09fE4c125E68864587A";
   const wheelPoolAddress = "0xd2F31a7F36f74ae697f790d01B45DBc4a9Ade429";
-  const decryptionOracleAddress = "0xa02Cda4Ca3a71D7C46997716F4283aa851C28812";
   const protocolTreasuryAddress = "0xF92c6d8F1cba15eE6c737a7E5c121ad5b6b78982";
 
   // === Initialize the Zama SDK ===
   useEffect(() => {
-    // Only run on client-side
-    if (typeof window === 'undefined') return;
-    
     const initZama = async () => {
       try {
-        // Check for browser environment first
-        if (!window.ethereum) {
-          setStatus("❌ Please install MetaMask to use this app");
-          return;
-        }
-
-        setStatus("Loading Zama SDK...");
         const response = await fetch(
           "https://cdn.zama.ai/relayer-sdk-js/0.2.0/relayer-sdk-js.js"
         );
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch SDK: ${response.status}`);
-        }
-        
         const text = await response.text();
 
         const utf8Bytes = new TextEncoder().encode(text);
@@ -99,7 +83,7 @@ export default function ZamaVotingPage() {
         await new Promise((resolve, reject) => {
           const timeout = setTimeout(
             () => reject(new Error("Zama SDK load timeout")),
-            15000
+            10000
           );
           window.addEventListener("zama-ready", () => {
             clearTimeout(timeout);
@@ -110,17 +94,15 @@ export default function ZamaVotingPage() {
         const { initSDK, createInstance, SepoliaConfig } = window.ZamaSDK || {};
         if (!initSDK) throw new Error("Zama SDK not loaded properly");
 
-        setStatus("Initializing SDK...");
         await initSDK();
 
-        setStatus("Connecting wallet...");
+        if (!window.ethereum) throw new Error("MetaMask not detected");
         const accounts = await window.ethereum.request({
           method: "eth_requestAccounts",
         });
         const userAddr = ethers.getAddress(accounts[0]);
         setUserAddress(userAddr);
 
-        setStatus("Creating FHE instance...");
         const config = { ...SepoliaConfig, network: window.ethereum };
         const instance = await createInstance(config);
         setInstance(instance);
@@ -128,16 +110,11 @@ export default function ZamaVotingPage() {
         setStatus("✅ SDK initialized successfully");
       } catch (err) {
         console.error("❌ Zama Init Error:", err);
-        setStatus(`❌ ${err.message || 'Failed to initialize SDK'}`);
+        setStatus(`❌ ${err.message}`);
       }
     };
 
-    // Add a small delay to ensure DOM is ready
-    const timer = setTimeout(() => {
-      initZama();
-    }, 100);
-
-    return () => clearTimeout(timer);
+    initZama();
   }, []);
 
   // === FACTORY FUNCTIONS ===
@@ -606,7 +583,6 @@ export default function ZamaVotingPage() {
 
   // Load votings list on tab change
   useEffect(() => {
-    if (typeof window === 'undefined') return;
     if (userAddress && activeTab === "votings") {
       loadAllVotings();
     }
@@ -615,7 +591,6 @@ export default function ZamaVotingPage() {
 
   // Load voting data when a voting is selected
   useEffect(() => {
-    if (typeof window === 'undefined') return;
     if (selectedVoting && userAddress && instance) {
       loadVotingData();
       const interval = setInterval(() => loadVotingData(), 30000);
@@ -1059,6 +1034,110 @@ export default function ZamaVotingPage() {
                       </CardContent>
                     </Card>
 
+                    {/* Results Revealed Card */}
+                    {votingData.resultsRevealed && votingData.votingResolved && (
+                      <Card className="border-2 border-purple-500 bg-purple-500/5">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <Trophy className="h-5 w-5 text-yellow-500" />
+                            Results Revealed
+                          </CardTitle>
+                          <CardDescription>
+                            Final vote counts and reward multipliers
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          {/* Vote Counts Summary */}
+                          <div className="grid grid-cols-3 gap-4">
+                            {[0, 1, 2].map((option) => {
+                              const optionInfo = getOptionInfo(option);
+                              const rankInfo = getRankInfo(option);
+                              const voteCount = option === 0 ? votingData.votesA : option === 1 ? votingData.votesB : votingData.votesC;
+                              const multiplier = option === votingData.minorityOption 
+                                ? votingData.minorityMultiplier 
+                                : option === votingData.middleOption 
+                                  ? votingData.middleMultiplier 
+                                  : votingData.majorityMultiplier;
+                              
+                              return (
+                                <div key={option} className={`p-4 rounded-lg border-2 ${rankInfo?.bgColor || ''}`}>
+                                  <div className="text-center space-y-2">
+                                    <div className="text-3xl">{optionInfo.emoji}</div>
+                                    <div className="font-bold text-sm">{optionInfo.label}</div>
+                                    <div className="text-2xl font-bold">{voteCount}</div>
+                                    <div className="text-xs text-muted-foreground">votes</div>
+                                    <div className={`font-semibold ${rankInfo?.color || ''}`}>
+                                      {rankInfo?.emoji} {rankInfo?.label}
+                                    </div>
+                                    <div className="text-sm font-semibold">
+                                      {(multiplier / 100).toFixed(2)}x
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* User's Vote & Reward */}
+                          {votingData.voteDecrypted && votingData.userDecryptedVote !== undefined && (
+                            <div className="p-4 bg-blue-500/10 border-2 border-blue-500 rounded-lg">
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Your Vote</p>
+                                    <p className="text-lg font-bold">
+                                      {getOptionInfo(votingData.userDecryptedVote).emoji} {getOptionInfo(votingData.userDecryptedVote).label}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-sm text-muted-foreground">Your Reward</p>
+                                    <p className="text-2xl font-bold text-green-600">
+                                      {votingData.userRewardAmount?.toFixed(2)} USDC
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="pt-2 border-t">
+                                  <p className="text-xs text-muted-foreground">
+                                    Result: {getRankInfo(votingData.userDecryptedVote)?.label || 'N/A'}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Decryption & Claim Buttons */}
+                          {votingData.hasVoted && !votingData.voteDecrypted && (
+                            <Button 
+                              onClick={handleRequestDecryption}
+                              disabled={votingLoading}
+                              className="w-full"
+                              size="lg"
+                              variant="outline"
+                            >
+                              {votingLoading ? "Requesting..." : "🔐 Request Vote Decryption"}
+                            </Button>
+                          )}
+
+                          {votingData.voteDecrypted && !votingData.hasClaimedReward && (
+                            <Button 
+                              onClick={handleClaimReward}
+                              disabled={votingLoading}
+                              className="w-full bg-gradient-to-r from-green-600 to-emerald-600"
+                              size="lg"
+                            >
+                              {votingLoading ? "Claiming..." : "💰 Claim Your Reward"}
+                            </Button>
+                          )}
+
+                          {votingData.hasClaimedReward && (
+                            <div className="p-4 bg-green-500/10 border-2 border-green-500 rounded-lg text-center">
+                              <p className="font-semibold text-green-600">✅ Reward Already Claimed</p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+
                     {/* Action Buttons */}
                     {!votingData.hasVoted && votingData.timeRemaining > 0 && (
                       <Card className="border-2 border-purple-500">
@@ -1078,17 +1157,17 @@ export default function ZamaVotingPage() {
                       </Card>
                     )}
 
-                    {votingData.votingResolved && !votingData.hasClaimedReward && votingData.hasVoted && (
-                      <Card className="border-2 border-green-500">
-                        <CardContent className="pt-6">
-                          <Button 
-                            onClick={handleClaimReward}
-                            disabled={votingLoading}
-                            className="w-full"
-                            size="lg"
-                          >
-                            {votingLoading ? "Claiming..." : "Claim Your Reward"}
-                          </Button>
+                    {/* Waiting for Results */}
+                    {votingData.hasVoted && votingData.timeRemaining <= 0 && !votingData.resultsRevealed && (
+                      <Card className="border-2 border-yellow-500">
+                        <CardContent className="pt-6 text-center">
+                          <div className="space-y-3">
+                            <div className="h-12 w-12 animate-spin rounded-full border-4 border-yellow-500 border-t-transparent mx-auto" />
+                            <p className="font-semibold">⏳ Waiting for Results to be Revealed</p>
+                            <p className="text-sm text-muted-foreground">
+                              The voting has ended. Results will be available soon.
+                            </p>
+                          </div>
                         </CardContent>
                       </Card>
                     )}
@@ -1161,12 +1240,13 @@ export default function ZamaVotingPage() {
                         <Input
                           id="duration"
                           type="number"
-                          placeholder="3600"
+                          placeholder="300"
+                          min="300"
                           value={votingDuration}
                           onChange={(e) => setVotingDuration(e.target.value)}
                         />
                         <p className="text-xs text-muted-foreground">
-                          3600 = 1 hour, 86400 = 1 day, 604800 = 1 week
+                          Minimum: 300 (5 min) • 3600 = 1 hour • 86400 = 1 day • 604800 = 1 week
                         </p>
                       </div>
 
