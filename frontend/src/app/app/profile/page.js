@@ -8,6 +8,7 @@ import { useAccount, useChainId, useSignMessage, useSignTypedData } from 'wagmi'
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ConnectWallet } from '@/components/wallet/ConnectWallet';
+import { DesktopFallback } from '@/components/ui/ComingSoon';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { recoverTypedDataAddress } from 'viem';
 
@@ -16,8 +17,8 @@ const DEFAULT_AGENT_NAME = 'aeq-agent';
 const DEFAULT_TTL_SECONDS = 180 * 24 * 60 * 60; // 180 days
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
-const EXTENDED_INDEX = 9;                       // required subaccount index
-const EXTENDED_NAME  = 'aeq-prod trading key';  // required subaccount name/description
+const EXTENDED_INDEX = 4;                       // required subaccount index
+const EXTENDED_NAME  = 'aeq_elioM2.0 trading key';  // required subaccount name/description
 
 /* --------------------------- SIWE helpers ----------------------------- */
 function buildSiweMessage({ address, nonce, chainId, domain, uri }) {
@@ -463,7 +464,7 @@ export default function ProfilePage() {
   /* ----------------------------- render -------------------------------- */
   const apiKeyReady = !!(extKeyInfo?.api_key || extKeyInfo?.has_api_key);
 
-  return (
+  const profileContent = (
     <div className="max-w-3xl mx-auto space-y-8 py-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Profile</h1>
@@ -612,6 +613,15 @@ export default function ProfilePage() {
         </>
       )}
     </div>
+  );
+
+  return (
+    <DesktopFallback 
+      comingSoonTitle="Profile Coming Soon!"
+      comingSoonDescription="We're building a comprehensive profile management system for mobile. Manage your wallet connections, trading keys, and account settings all in one place!"
+    >
+      {profileContent}
+    </DesktopFallback>
   );
 }
 

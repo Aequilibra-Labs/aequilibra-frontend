@@ -1,15 +1,24 @@
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Inter, JetBrains_Mono, DM_Sans } from 'next/font/google';
 import { Providers } from '@/components/providers';
+import '@coinbase/onchainkit/styles.css';
 import './globals.css';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const inter = Inter({
+  variable: '--font-inter',
   subsets: ['latin'],
+  display: 'swap',
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const jetbrainsMono = JetBrains_Mono({
+  variable: '--font-jetbrains-mono',
   subsets: ['latin'],
+  display: 'swap',
+});
+
+const dmSans = DM_Sans({
+  variable: '--font-dm-sans',
+  subsets: ['latin'],
+  display: 'swap',
 });
 
 export const metadata = {
@@ -49,15 +58,52 @@ export const metadata = {
     index: true,
     follow: true,
   },
+  other: {
+    'fc:miniapp': JSON.stringify({
+      version: "next",
+      imageUrl: "https://aequilibra.vercel.app/og-image.png",
+      button: {
+        title: "Open Aequilibra",
+        action: {
+          type: "launch_miniapp",
+          name: "Aequilibra",
+          url: "https://aequilibra.vercel.app"
+        }
+      }
+    })
+  }
 };
+
+import { MiniAppSdk } from '@/components/MiniAppSdk';
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="en" className="h-full" suppressHydrationWarning>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="color-scheme" content="light dark" />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}
+        className={`${inter.variable} ${jetbrainsMono.variable} ${dmSans.variable} antialiased h-full`}
       >
-        <Providers>{children}</Providers>
+        {/* Skip to content link for accessibility */}
+        <a 
+          href="#main-content" 
+          className="skip-to-content focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:text-sm focus:font-medium"
+        >
+          Skip to main content
+        </a>
+        
+        <MiniAppSdk />
+        <Providers>
+          <div id="root" role="application" aria-label="Aequilibra App">
+            {children}
+          </div>
+        </Providers>
+        
+        {/* Live region for announcements */}
+        <div id="live-announcer" aria-live="polite" aria-atomic="true" className="sr-only" />
+        <div id="live-announcer-assertive" aria-live="assertive" aria-atomic="true" className="sr-only" />
       </body>
     </html>
   );

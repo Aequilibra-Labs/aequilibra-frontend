@@ -1,22 +1,20 @@
-import { NavBar } from '@/components/landing/NavBar';
-import { Hero } from '@/components/landing/Hero';
-import { Features } from '@/components/landing/Features';
-import { HowItWorks } from '@/components/landing/HowItWorks';
-import { SupportedDexes } from '@/components/landing/SupportedDexes';
-import { Footer } from '@/components/landing/Footer';
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-// Landing/Marketing homepage
 export default function HomePage() {
+  const router = useRouter();
+  
+  useEffect(() => {
+    router.replace("/app/zama-game");
+  }, [router]);
+
   return (
-    <div className="flex min-h-screen flex-col w-full">
-      <NavBar />
-      <main className="flex-1 w-full space-y-8 md:space-y-12">
-        <Hero />
-        <Features />
-        <HowItWorks />
-        <SupportedDexes />
-      </main>
-      <Footer />
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
+        <p>Redirecting to Zama Voting Game...</p>
+      </div>
     </div>
   );
 }
